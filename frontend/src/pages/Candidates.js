@@ -39,7 +39,7 @@ const Candidates = () => {
   };
 
   const handleDeleteCandidate = async (candidateId) => {
-    if (!confirm('Are you sure you want to delete this candidate?')) {
+    if (!window.confirm('Are you sure you want to delete this candidate?')) {
       return;
     }
 

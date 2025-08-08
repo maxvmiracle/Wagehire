@@ -77,7 +77,7 @@ const Admin = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('Are you sure you want to delete this user?')) {
+    if (!window.confirm('Are you sure you want to delete this user?')) {
       return;
     }
 
