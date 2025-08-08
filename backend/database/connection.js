@@ -1,7 +1,17 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'wagehire.db');
+// Use in-memory database for Vercel (serverless environment)
+const getDbPath = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // Use in-memory database for Vercel
+    return ':memory:';
+  }
+  // Use file-based database for development
+  return path.join(__dirname, 'wagehire.db');
+};
+
+const dbPath = getDbPath();
 
 class Database {
   constructor() {
@@ -15,7 +25,7 @@ class Database {
           console.error('Error connecting to database:', err);
           reject(err);
         } else {
-          console.log('Connected to SQLite database');
+          console.log(`Connected to SQLite database: ${dbPath}`);
           resolve();
         }
       });

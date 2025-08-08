@@ -83,30 +83,21 @@ Before running this application, make sure you have the following installed:
 
 ## 🚀 Installation & Setup
 
-### 1. Clone the Repository
+### Local Development
+
+#### 1. Clone the Repository
 ```bash
 git clone <repository-url>
 cd wagehire
 ```
 
-### 2. Install Dependencies
+#### 2. Install Dependencies
 ```bash
-# Install root dependencies
-npm install
-
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../frontend
-npm install
-
-# Return to root directory
-cd ..
+# Install all dependencies (root, backend, and frontend)
+npm run install-all
 ```
 
-### 3. Environment Setup
+#### 3. Environment Setup
 Create a `.env` file in the backend directory:
 ```bash
 cd backend
@@ -120,15 +111,15 @@ JWT_SECRET=your-super-secret-jwt-key-here
 NODE_ENV=development
 ```
 
-### 4. Initialize Database
+#### 4. Initialize Database
 ```bash
 cd backend
 npm run init-db
 ```
 
-### 5. Start the Application
+#### 5. Start the Application
 
-#### Development Mode (Recommended)
+##### Development Mode (Recommended)
 ```bash
 # From the root directory
 npm run dev
@@ -136,7 +127,7 @@ npm run dev
 
 This will start both the backend server (port 5000) and frontend development server (port 3000) concurrently.
 
-#### Production Mode
+##### Production Mode
 ```bash
 # Build the frontend
 npm run build
@@ -145,9 +136,32 @@ npm run build
 npm start
 ```
 
-### 6. Access the Application
+#### 6. Access the Application
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:5000/api
+
+### 🚀 Vercel Deployment
+
+For production deployment on Vercel, see the [DEPLOYMENT.md](DEPLOYMENT.md) guide.
+
+#### Quick Deploy
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy from project root
+vercel
+```
+
+#### Environment Variables for Vercel
+Set these in your Vercel project settings:
+```
+JWT_SECRET=your-super-secret-jwt-key-here
+NODE_ENV=production
+```
 
 ## 👥 Default Users
 

@@ -1,8 +1,18 @@
 import axios from 'axios';
 
+// Determine the base URL based on environment
+const getBaseURL = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // In production, use the same domain (Vercel will handle routing)
+    return '/api';
+  }
+  // In development, use the proxy
+  return '/api';
+};
+
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
