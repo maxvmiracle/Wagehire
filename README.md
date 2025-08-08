@@ -165,26 +165,52 @@ The system comes with pre-configured demo users:
 wagehire/
 ├── backend/
 │   ├── database/
-│   │   ├── init.js          # Database initialization
-│   │   └── connection.js    # Database connection utility
+│   │   ├── connection.js    # Database connection utility
+│   │   ├── db.js           # Database schema and queries
+│   │   ├── init.js         # Database initialization
+│   │   ├── interview_management.db  # SQLite database file
+│   │   └── wagehire.db     # Alternative database file
 │   ├── routes/
-│   │   ├── auth.js          # Authentication routes
-│   │   ├── interviews.js    # Interview management routes
-│   │   ├── candidates.js    # Candidate management routes
-│   │   └── users.js         # User management routes
+│   │   ├── admin.js        # Admin-specific routes
+│   │   ├── auth.js         # Authentication routes
+│   │   ├── candidates.js   # Candidate management routes
+│   │   ├── interviews.js   # Interview management routes
+│   │   └── users.js        # User management routes
 │   ├── package.json
-│   └── server.js            # Main server file
+│   ├── reset-db.js         # Database reset utility
+│   └── server.js           # Main server file
 ├── frontend/
 │   ├── public/
+│   │   └── index.html      # HTML template
 │   ├── src/
-│   │   ├── components/      # Reusable components
-│   │   ├── contexts/        # React contexts
-│   │   ├── pages/           # Page components
-│   │   ├── App.js           # Main app component
-│   │   └── index.js         # Entry point
+│   │   ├── components/     # Reusable components
+│   │   │   └── Layout.js   # Main layout component
+│   │   ├── contexts/       # React contexts
+│   │   │   └── AuthContext.js  # Authentication context
+│   │   ├── pages/          # Page components
+│   │   │   ├── AddCandidate.js
+│   │   │   ├── Admin.js
+│   │   │   ├── CandidateDetail.js
+│   │   │   ├── Candidates.js
+│   │   │   ├── Dashboard.js
+│   │   │   ├── EditInterview.js
+│   │   │   ├── InterviewDetail.js
+│   │   │   ├── Interviews.js
+│   │   │   ├── Login.js
+│   │   │   ├── Profile.js
+│   │   │   ├── Register.js
+│   │   │   ├── ScheduleInterview.js
+│   │   │   └── Users.js
+│   │   ├── services/
+│   │   │   └── api.js      # API service functions
+│   │   ├── App.js          # Main app component
+│   │   ├── index.css       # Global styles
+│   │   ├── index.js        # Entry point
+│   │   └── setupProxy.js   # Development proxy configuration
 │   ├── package.json
-│   └── tailwind.config.js   # Tailwind configuration
-├── package.json             # Root package.json
+│   ├── postcss.config.js   # PostCSS configuration
+│   └── tailwind.config.js  # Tailwind configuration
+├── package.json            # Root package.json
 └── README.md
 ```
 
@@ -217,6 +243,11 @@ wagehire/
 - `GET /api/users/me/dashboard` - Get user dashboard stats
 - `PUT /api/users/me` - Update user profile
 
+### Admin (Admin-only endpoints)
+- `GET /api/admin/stats` - Get admin dashboard statistics
+- `GET /api/admin/users` - Get all users (admin view)
+- `PUT /api/admin/users/:id` - Update user (admin)
+
 ## 🎨 Customization
 
 ### Styling
@@ -232,30 +263,45 @@ To switch from SQLite to another database:
 
 ### Environment Variables
 Key environment variables you can customize:
-- `PORT` - Backend server port
-- `JWT_SECRET` - JWT signing secret
-- `NODE_ENV` - Environment mode
+- `PORT` - Backend server port (default: 5000)
+- `JWT_SECRET` - JWT signing secret (required for security)
+- `NODE_ENV` - Environment mode (development/production)
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 1. **Port already in use**
-   - Change the port in the `.env` file
-   - Kill processes using the port
+   ```bash
+   # Change the port in the .env file
+   PORT=5001
+   
+   # Or kill processes using the port
+   npx kill-port 5000
+   ```
 
 2. **Database connection issues**
    - Ensure SQLite is properly installed
    - Check file permissions for the database file
+   - Run `npm run init-db` to recreate the database
 
 3. **Frontend not connecting to backend**
    - Verify the proxy setting in `frontend/package.json`
-   - Check if the backend server is running
+   - Check if the backend server is running on the correct port
+   - Ensure CORS is properly configured
 
 4. **Authentication issues**
    - Clear browser localStorage
    - Check JWT token expiration
    - Verify JWT_SECRET in environment variables
+   - Try logging out and logging back in
+
+5. **Module not found errors**
+   ```bash
+   # Clear node_modules and reinstall
+   rm -rf node_modules package-lock.json
+   npm install
+   ```
 
 ### Development Tips
 
@@ -263,26 +309,64 @@ Key environment variables you can customize:
 2. **Database Reset**: Run `npm run init-db` to reset the database with sample data
 3. **API Testing**: Use tools like Postman or Insomnia to test API endpoints
 4. **Logs**: Check console logs for detailed error information
+5. **Browser DevTools**: Use browser developer tools to debug frontend issues
 
 ## 📝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. Add tests if applicable
-5. Submit a pull request
+5. Commit your changes (`git commit -m 'Add some amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Submit a pull request
+
+### Development Guidelines
+- Follow the existing code style and conventions
+- Add comments for complex logic
+- Test your changes thoroughly
+- Update documentation if needed
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🤝 Support
 
 If you encounter any issues or have questions:
-1. Check the troubleshooting section
-2. Review the API documentation
-3. Create an issue in the repository
+
+1. **Check the troubleshooting section** above
+2. **Review the API documentation** in this README
+3. **Search existing issues** in the repository
+4. **Create a new issue** with:
+   - Clear description of the problem
+   - Steps to reproduce
+   - Expected vs actual behavior
+   - Environment details (OS, Node.js version, etc.)
+
+## 🚀 Deployment
+
+### Production Deployment
+1. Set `NODE_ENV=production` in your environment variables
+2. Build the frontend: `npm run build`
+3. Start the backend server: `npm start`
+4. Configure your reverse proxy (nginx, Apache) to serve the built frontend
+5. Set up environment variables for production
+
+### Docker Deployment (Optional)
+```dockerfile
+# Example Dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
+```
 
 ---
 
-**Happy Interviewing! 🎉** 
+**Happy Interviewing! 🎉**
+
+*Built with ❤️ using React, Express.js, and SQLite* 
