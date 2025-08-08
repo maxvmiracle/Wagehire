@@ -20,9 +20,6 @@ import {
   BookOpen,
   Shield,
   UserCog,
-  Briefcase,
-  Award,
-  FileText,
   UserX
 } from 'lucide-react';
 

@@ -5,14 +5,14 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { 
   Calendar, Clock, MapPin, Building, FileText, AlertCircle, 
-  Globe, User, DollarSign, Star, Briefcase, Mail, Linkedin, Link,
+  Globe, User, DollarSign, Briefcase, Mail, Linkedin, Link,
   ArrowLeft, Save, X
 } from 'lucide-react';
 
 const EditInterview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -38,7 +38,7 @@ const EditInterview = () => {
 
   useEffect(() => {
     fetchInterview();
-  }, [id]);
+  }, [id, fetchInterview]);
 
   const fetchInterview = async () => {
     try {
@@ -187,7 +187,7 @@ const EditInterview = () => {
       // Combine date and time
       const scheduledDateTime = new Date(`${formData.scheduled_date}T${formData.scheduled_time}`).toISOString();
       
-      const response = await axios.put(`/api/interviews/${id}`, {
+      await axios.put(`/api/interviews/${id}`, {
         ...formData,
         scheduled_date: scheduledDateTime
       });

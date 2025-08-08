@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkAuth();
-  }, [token]);
+  }, [token, checkAuth]);
 
   const login = async (email, password) => {
     try {

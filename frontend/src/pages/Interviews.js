@@ -19,14 +19,12 @@ import {
   User,
   MapPin,
   ExternalLink,
-  Briefcase,
-  Award,
   Linkedin,
   LinkIcon
 } from 'lucide-react';
 
 const Interviews = () => {
-  const { user, isAdmin } = useAuth();
+
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

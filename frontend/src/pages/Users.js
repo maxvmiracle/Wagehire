@@ -4,11 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { 
   Users as UsersIcon, 
   Shield, 
-  UserCog, 
   Search, 
   Filter,
   Eye,
-  Edit,
   Trash2,
   Calendar,
   Mail,

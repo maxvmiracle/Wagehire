@@ -2,26 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  LayoutDashboard,
-  Users,
-  Calendar,
   UserCheck,
-  Settings,
   LogOut,
   Menu,
-  X,
   Bell,
   User,
   Home,
   CalendarCheck,
   Users2,
-  FileText,
   BarChart3,
-  MessageSquare,
   Shield,
   UserCog,
-  Briefcase,
-  Award,
   UserX
 } from 'lucide-react';
 
@@ -30,7 +21,7 @@ const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+
   const [profileCompletion, setProfileCompletion] = useState(0);
 
   // Calculate profile completion

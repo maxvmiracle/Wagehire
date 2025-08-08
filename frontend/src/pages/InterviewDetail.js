@@ -28,14 +28,14 @@ import {
 
 const InterviewDetail = () => {
   const { id } = useParams();
-  const { user, isAdmin } = useAuth();
+
   const navigate = useNavigate();
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchInterviewDetail();
-  }, [id]);
+  }, [id, fetchInterviewDetail]);
 
   const fetchInterviewDetail = async () => {
     try {

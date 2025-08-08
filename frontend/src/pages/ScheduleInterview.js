@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { 
   Calendar, Clock, MapPin, Building, FileText, AlertCircle, 
-  Globe, User, DollarSign, Star, Briefcase, Mail, Linkedin, Link,
+  Globe, User, DollarSign, Briefcase, Mail, Linkedin, Link,
   ArrowLeft, Save, X, Plus, Target
 } from 'lucide-react';
 
@@ -135,7 +135,7 @@ const ScheduleInterview = () => {
       // Combine date and time
       const scheduledDateTime = new Date(`${formData.scheduled_date}T${formData.scheduled_time}`).toISOString();
       
-      const response = await axios.post('/api/interviews', {
+      await axios.post('/api/interviews', {
         ...formData,
         scheduled_date: scheduledDateTime
       });
