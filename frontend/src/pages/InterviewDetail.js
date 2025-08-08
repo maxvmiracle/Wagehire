@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import {
@@ -33,11 +32,7 @@ const InterviewDetail = () => {
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchInterviewDetail();
-  }, [id, fetchInterviewDetail]);
-
-  const fetchInterviewDetail = async () => {
+  const fetchInterviewDetail = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`/api/interviews/${id}`);
@@ -49,7 +44,11 @@ const InterviewDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchInterviewDetail();
+  }, [fetchInterviewDetail]);
 
   const handleDeleteInterview = async () => {
     if (!window.confirm('Are you sure you want to delete this interview?')) {

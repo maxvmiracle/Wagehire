@@ -2,12 +2,24 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-const dbPath = path.join(__dirname, 'wagehire.db');
+// Use the same database path logic as connection.js
+const getDbPath = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // Use in-memory database for Vercel
+    return ':memory:';
+  }
+  // Use file-based database for development
+  return path.join(__dirname, 'wagehire.db');
+};
+
+const dbPath = getDbPath();
 const db = new sqlite3.Database(dbPath);
 
 async function initDatabase() {
   return new Promise((resolve, reject) => {
     console.log('Starting database initialization...');
+    console.log(`Using database: ${dbPath}`);
+    
     db.serialize(() => {
       // Drop existing tables to ensure clean schema
       db.run('DROP TABLE IF EXISTS interview_feedback');

@@ -12,9 +12,6 @@ import {
   Edit,
   Trash2,
   Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
   Building,
   User,
   MapPin,
@@ -60,19 +57,6 @@ const Interviews = () => {
     } catch (error) {
       console.error('Error deleting interview:', error);
       toast.error('Failed to delete interview');
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-5 h-5 text-success-600" />;
-      case 'cancelled':
-        return <XCircle className="w-5 h-5 text-danger-600" />;
-      case 'scheduled':
-        return <Clock className="w-5 h-5 text-primary-600" />;
-      default:
-        return <AlertCircle className="w-5 h-5 text-warning-600" />;
     }
   };
 

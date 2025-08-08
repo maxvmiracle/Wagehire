@@ -4,8 +4,8 @@ import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { 
   Calendar, Clock, MapPin, Building, FileText, AlertCircle, 
-  Globe, User, DollarSign, Briefcase, Mail, Linkedin, Link,
-  ArrowLeft, Save, X, Plus, Target
+  Globe, User, Briefcase, Mail, Linkedin, Link,
+  ArrowLeft, Save, X, Target
 } from 'lucide-react';
 
 const ScheduleInterview = () => {

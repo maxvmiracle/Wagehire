@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { 
@@ -36,11 +35,7 @@ const EditInterview = () => {
   });
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    fetchInterview();
-  }, [id, fetchInterview]);
-
-  const fetchInterview = async () => {
+  const fetchInterview = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`/api/interviews/${id}`);
@@ -77,7 +72,11 @@ const EditInterview = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchInterview();
+  }, [fetchInterview]);
 
   // Handle form input changes
   const handleChange = (e) => {

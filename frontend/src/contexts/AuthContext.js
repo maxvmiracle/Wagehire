@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     if (!token) {
       setLoading(false);
       return;
@@ -43,11 +43,11 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     checkAuth();
-  }, [token, checkAuth]);
+  }, [checkAuth]);
 
   const login = async (email, password) => {
     try {

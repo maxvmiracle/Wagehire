@@ -53,8 +53,12 @@ app.use('*', (req, res) => {
 // Initialize database and start server
 async function startServer() {
   try {
-    await database.connect();
-    console.log('Database connection established');
+    // For production (Vercel), we don't need to connect to a persistent database
+    // The in-memory database will be created by initDatabase
+    if (process.env.NODE_ENV !== 'production') {
+      await database.connect();
+      console.log('Database connection established');
+    }
     
     await initDatabase();
     console.log('Database initialized successfully');
