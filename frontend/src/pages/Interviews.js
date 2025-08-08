@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 const Interviews = () => {
+  const { isAdmin } = useAuth();
 
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
