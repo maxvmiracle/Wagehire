@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const database = require('../database/connection');
+const { run, get, all } = require('../database/db');
 const { authenticateToken, requireAdmin } = require('./auth');
 
 const router = express.Router();
@@ -58,7 +58,7 @@ router.get('/', authenticateToken, async (req, res) => {
     
     query += ' ORDER BY i.scheduled_date DESC';
     
-    const interviews = await database.all(query, params);
+    const interviews = await all(query, params);
     
     res.json({ interviews });
     
@@ -92,14 +92,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
       params.push(req.user.userId);
     }
     
-    const interview = await database.get(query, params);
+    const interview = await get(query, params);
     
     if (!interview) {
       return res.status(404).json({ error: 'Interview not found' });
     }
     
     // Get feedback if exists
-    const feedback = await database.get(`
+    const feedback = await get(`
       SELECT * FROM interview_feedback WHERE interview_id = ?
     `, [id]);
     
@@ -157,7 +157,7 @@ router.post('/', [
     } = req.body;
     
     // Create interview for the current candidate
-    const result = await database.run(`
+    const result = await run(`
       INSERT INTO interviews (
         candidate_id, company_name, job_title, scheduled_date, duration, 
         interview_type, location, notes, status,
@@ -173,7 +173,7 @@ router.post('/', [
     ]);
     
     // Get the created interview
-    const newInterview = await database.get(`
+    const newInterview = await get(`
       SELECT 
         i.*,
         u.name as candidate_name,
@@ -246,7 +246,7 @@ router.put('/:id', [
       params.push(req.user.userId);
     }
     
-    const existingInterview = await database.get(query, params);
+    const existingInterview = await get(query, params);
     
     if (!existingInterview) {
       return res.status(404).json({ error: 'Interview not found' });
@@ -357,12 +357,12 @@ router.put('/:id', [
     updateValues.push(id);
     
     // Execute update
-    await database.run(`
+    await run(`
       UPDATE interviews SET ${updateFields.join(', ')} WHERE id = ?
     `, updateValues);
     
     // Get updated interview
-    const updatedInterview = await database.get(`
+    const updatedInterview = await get(`
       SELECT 
         i.*,
         u.name as candidate_name,
@@ -397,14 +397,14 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       params.push(req.user.userId);
     }
     
-    const interview = await database.get(query, params);
+    const interview = await get(query, params);
     
     if (!interview) {
       return res.status(404).json({ error: 'Interview not found' });
     }
     
     // Delete interview
-    await database.run('DELETE FROM interviews WHERE id = ?', [id]);
+    await run('DELETE FROM interviews WHERE id = ?', [id]);
     
     res.json({ message: 'Interview deleted successfully' });
     
@@ -438,7 +438,7 @@ router.post('/:id/feedback', [
     } = req.body;
     
     // Check if interview exists and belongs to the candidate
-    const interview = await database.get(
+    const interview = await get(
       'SELECT * FROM interviews WHERE id = ? AND candidate_id = ?',
       [id, req.user.userId]
     );
@@ -448,7 +448,7 @@ router.post('/:id/feedback', [
     }
     
     // Check if feedback already exists
-    const existingFeedback = await database.get(
+    const existingFeedback = await get(
       'SELECT id FROM interview_feedback WHERE interview_id = ? AND candidate_id = ?',
       [id, req.user.userId]
     );
@@ -458,7 +458,7 @@ router.post('/:id/feedback', [
     }
     
     // Insert feedback
-    await database.run(`
+    await run(`
       INSERT INTO interview_feedback (
         interview_id, candidate_id, technical_skills, communication_skills,
         problem_solving, cultural_fit, overall_rating, feedback_text, recommendation
@@ -466,7 +466,7 @@ router.post('/:id/feedback', [
     `, [id, req.user.userId, technical_skills, communication_skills, problem_solving, cultural_fit, overall_rating, feedback_text, recommendation]);
     
     // Update interview status to completed
-    await database.run(
+    await run(
       'UPDATE interviews SET status = ? WHERE id = ?',
       ['completed', id]
     );

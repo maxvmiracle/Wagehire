@@ -1,24 +1,11 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcrypt = require('bcryptjs');
-
-// Use the same database path logic as connection.js
-const getDbPath = () => {
-  if (process.env.NODE_ENV === 'production') {
-    // Use in-memory database for Vercel
-    return ':memory:';
-  }
-  // Use file-based database for development
-  return path.join(__dirname, 'wagehire.db');
-};
-
-const dbPath = getDbPath();
-const db = new sqlite3.Database(dbPath);
+const { db } = require('./db');
 
 async function initDatabase() {
   return new Promise((resolve, reject) => {
     console.log('Starting database initialization...');
-    console.log(`Using database: ${dbPath}`);
     
     db.serialize(() => {
       // Drop existing tables to ensure clean schema
@@ -70,6 +57,23 @@ async function initDatabase() {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (candidate_id) REFERENCES users (id)
+        )
+      `);
+
+      // Create candidates table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS candidates (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          phone TEXT,
+          resume_url TEXT,
+          notes TEXT,
+          status TEXT DEFAULT 'pending',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id)
         )
       `);
 

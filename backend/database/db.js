@@ -88,6 +88,30 @@ const initializeTables = () => {
         console.log('Interviews table created/verified');
       });
 
+      // Create candidates table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS candidates (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          phone TEXT,
+          resume_url TEXT,
+          notes TEXT,
+          status TEXT DEFAULT 'pending',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+      `, (err) => {
+        if (err) {
+          console.error('Error creating candidates table:', err);
+          reject(err);
+          return;
+        }
+        console.log('Candidates table created/verified');
+      });
+
       // Create interview_feedback table
       db.run(`
         CREATE TABLE IF NOT EXISTS interview_feedback (

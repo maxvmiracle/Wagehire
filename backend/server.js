@@ -17,19 +17,20 @@ app.use(express.urlencoded({ extended: true }));
 
 // Database initialization
 const initDatabase = require('./database/init');
-const database = require('./database/connection');
 
 // Routes
 const { router: authRoutes } = require('./routes/auth');
 const interviewRoutes = require('./routes/interviews');
 const userRoutes = require('./routes/users');
 const adminRoutes = require('./routes/admin');
+const candidateRoutes = require('./routes/candidates');
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/interviews', interviewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/candidates', candidateRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -55,10 +56,7 @@ async function startServer() {
   try {
     // For production (Vercel), we don't need to connect to a persistent database
     // The in-memory database will be created by initDatabase
-    if (process.env.NODE_ENV !== 'production') {
-      await database.connect();
-      console.log('Database connection established');
-    }
+    console.log('Database initialization started');
     
     await initDatabase();
     console.log('Database initialized successfully');

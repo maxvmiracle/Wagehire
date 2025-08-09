@@ -5,56 +5,86 @@
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
+    scroll-behavior: smooth;
+    font-size: 14px; /* Reduced from default 16px to ~87.5% */
   }
   
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply text-gray-900;
+    overflow-x: hidden;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><defs><linearGradient id="a" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%233b82f6;stop-opacity:1" /><stop offset="50%" style="stop-color:%231e40af;stop-opacity:1" /><stop offset="100%" style="stop-color:%231e3a8a;stop-opacity:1" /></linearGradient></defs><rect width="100%" height="100%" fill="url(%23a)"/><circle cx="200" cy="200" r="100" fill="rgba(255,255,255,0.1)"/><circle cx="1000" cy="600" r="150" fill="rgba(255,255,255,0.05)"/><circle cx="800" cy="150" r="80" fill="rgba(255,255,255,0.08)"/></svg>');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  /* Prevent horizontal scroll on mobile */
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Better text wrapping */
+  p, h1, h2, h3, h4, h5, h6 {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Improve focus states */
+  *:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
   }
 }
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm hover:transform hover:scale-105; /* Enhanced styling */
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-md hover:shadow-lg;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500;
+    @apply bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500 shadow-md hover:shadow-lg;
   }
   
   .btn-success {
-    @apply bg-success-600 text-white hover:bg-success-700 focus:ring-success-500;
+    @apply bg-success-600 text-white hover:bg-success-700 focus:ring-success-500 shadow-md hover:shadow-lg;
   }
   
   .btn-danger {
-    @apply bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500;
+    @apply bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500 shadow-md hover:shadow-lg;
   }
   
   .btn-warning {
-    @apply bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500;
+    @apply bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500 shadow-md hover:shadow-lg;
   }
   
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm transition-all duration-200 hover:border-gray-400; /* Enhanced styling */
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200;
+    @apply bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-white/30 hover:shadow-xl transition-all duration-300;
   }
   
   .card-header {
-    @apply px-6 py-4 border-b border-gray-200;
+    @apply px-8 py-6 border-b border-gray-200/50; /* Increased padding significantly */
   }
   
   .card-body {
-    @apply px-6 py-4;
+    @apply px-8 py-6; /* Increased padding significantly */
+  }
+
+  /* Responsive card body */
+  .card-body-responsive {
+    @apply px-6 py-6 sm:px-8 sm:py-6; /* Increased padding significantly */
   }
   
   .status-badge {
-    @apply px-2 py-1 text-xs font-medium rounded-full;
+    @apply px-3 py-1.5 text-xs font-medium rounded-full; /* Increased padding */
   }
   
   .status-scheduled {
@@ -84,10 +114,337 @@
   .status-rejected {
     @apply bg-red-100 text-red-800;
   }
-}
 
-@layer utilities {
+  /* Responsive container - bigger board */
+  .container-responsive {
+    @apply w-full max-w-9xl mx-auto px-4 sm:px-6 lg:px-8; /* Increased to 9xl for bigger board */
+  }
+
+  /* Responsive grid */
+  .grid-responsive {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4; /* Increased gap */
+  }
+
+  /* Text truncation utilities */
+  .text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .text-truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Responsive spacing */
+  .space-y-responsive {
+    @apply space-y-4 sm:space-y-6; /* Increased spacing */
+  }
+
+  /* Mobile-first padding */
+  .p-responsive {
+    @apply p-4 sm:p-6 lg:p-8; /* Increased padding */
+  }
+
+  /* Responsive text sizes - reduced by ~20% */
+  .text-responsive-xl {
+    @apply text-base sm:text-lg lg:text-xl; /* Reduced from text-lg sm:text-xl lg:text-2xl */
+  }
+
+  .text-responsive-lg {
+    @apply text-sm sm:text-base lg:text-lg; /* Reduced from text-base sm:text-lg lg:text-xl */
+  }
+
+  /* Overflow handling */
+  .overflow-safe {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+  }
+
+  /* Mobile navigation improvements */
+  .mobile-nav {
+    @apply fixed inset-0 z-50 bg-white/95 backdrop-blur-sm lg:hidden;
+  }
+
+  .mobile-nav-overlay {
+    @apply fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden;
+  }
+
+  /* Better form responsiveness */
+  .form-responsive {
+    @apply space-y-4 sm:space-y-6; /* Increased spacing */
+  }
+
+  .form-group-responsive {
+    @apply space-y-2 sm:space-y-3; /* Increased spacing */
+  }
+
+  /* Responsive table */
+  .table-responsive {
+    @apply w-full overflow-x-auto;
+  }
+
+  .table-responsive table {
+    @apply min-w-full divide-y divide-gray-200;
+  }
+
+  /* Better button responsiveness */
+  .btn-responsive {
+    @apply px-3 py-2 text-sm sm:px-4 sm:py-2 sm:text-base; /* Increased padding and font size */
+  }
+
+  /* Responsive sidebar */
+  .sidebar-responsive {
+    @apply fixed left-6 top-1/2 transform -translate-y-1/2 z-50 transition-all duration-300 ease-in-out flex flex-col lg:block; /* Removed white background and shadow */
+  }
+
+  /* Content wrapper */
+  .content-wrapper {
+    @apply min-h-screen;
+  }
+
+  .content-main {
+    @apply max-w-9xl mx-auto px-4 sm:px-6 lg:px-8; /* Increased to 9xl for bigger board */
+  }
+
+  /* Responsive header */
+  .header-responsive {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0; /* Increased spacing */
+  }
+
+  /* Mobile top bar */
+  .mobile-top-bar {
+    @apply fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200/50 lg:hidden;
+  }
+
+  /* Detail pages */
+  .detail-responsive {
+    @apply space-y-6 sm:space-y-8; /* Increased spacing */
+  }
+
+  .detail-grid {
+    @apply grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10; /* Increased gap */
+  }
+
+  .detail-main {
+    @apply lg:col-span-2 space-y-6 sm:space-y-8; /* Increased spacing */
+  }
+
+  .detail-sidebar {
+    @apply space-y-6 sm:space-y-8; /* Increased spacing */
+  }
+
+  /* Text balance for better readability */
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Custom scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+
+  /* Safe area insets */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Better touch targets */
+  .touch-target {
+    @apply min-h-[36px] min-w-[36px]; /* Reduced from 44px */
+  }
+
+  /* Responsive images */
+  .img-responsive {
+    @apply w-full h-auto object-cover;
+  }
+
+  /* Focus visible for better accessibility */
+  .focus-visible {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  /* Wagehire branding */
+  .wagehire-brand {
+    @apply text-2xl font-bold bg-gradient-to-r from-primary-600 to-blue-700 bg-clip-text text-transparent;
+  }
+
+  .wagehire-logo {
+    @apply flex items-center space-x-2;
+  }
+
+  .wagehire-logo-icon {
+    @apply w-8 h-8 bg-gradient-to-r from-primary-600 to-blue-700 rounded-lg flex items-center justify-center;
+  }
+
+  .wagehire-logo-text {
+    @apply text-xl font-bold text-white;
+  }
 } 
+
+  /* Enhanced UI/UX improvements */
+  .hover-lift {
+    @apply transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-xl;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/25;
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  .smooth-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  .glass-effect {
+    @apply bg-white/95 backdrop-blur-sm border border-white/30;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-600 to-blue-700 bg-clip-text text-transparent;
+  }
+
+  .gradient-bg {
+    @apply bg-gradient-to-r from-primary-600 to-blue-700;
+  }
+
+  /* Enhanced card variations */
+  .card-elevated {
+    @apply bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-white/30 hover:shadow-xl transition-all duration-300 hover:transform hover:-translate-y-1;
+  }
+
+  .card-interactive {
+    @apply bg-white/95 backdrop-blur-sm rounded-xl shadow-md border border-white/30 hover:shadow-lg hover:border-primary-200 transition-all duration-300 cursor-pointer;
+  }
+
+  /* Enhanced button variations */
+  .btn-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-blue-700 text-white hover:from-primary-700 hover:to-blue-800 focus:ring-primary-500 shadow-md hover:shadow-lg hover:transform hover:scale-105;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-gray-700 hover:bg-gray-100 border border-gray-300 hover:border-gray-400;
+  }
+
+  /* Enhanced input variations */
+  .input-glass {
+    @apply bg-white/90 backdrop-blur-sm border-white/30 text-gray-900 placeholder-gray-500 focus:bg-white/95 focus:border-primary-300;
+  }
+
+  .input-floating {
+    @apply relative;
+  }
+
+  /* Loading states */
+  .loading-shimmer {
+    @apply animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200;
+  }
+
+  /* Enhanced spacing utilities */
+  .section-spacing {
+    @apply space-y-6 sm:space-y-8 lg:space-y-10;
+  }
+
+  .component-spacing {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  /* Content spacing improvements */
+  .content-spacing {
+    @apply space-y-4;
+  }
+
+  .item-spacing {
+    @apply space-y-3;
+  }
+
+  .text-spacing {
+    @apply space-y-2;
+  }
+
+  /* Better text layout */
+  .text-layout {
+    @apply leading-relaxed;
+  }
+
+  .text-compact {
+    @apply leading-tight;
+  }
+
+  /* Enhanced card content spacing */
+  .card-content {
+    @apply space-y-4;
+  }
+
+  .card-section {
+    @apply space-y-3;
+  }
+
+  .card-item {
+    @apply space-y-2;
+  }
+
+  /* Better grid spacing */
+  .grid-spacing {
+    @apply gap-4 sm:gap-6;
+  }
+
+  .grid-spacing-lg {
+    @apply gap-6 sm:gap-8;
+  }
+
+  /* Enhanced typography */
+  .text-hero {
+    @apply text-3xl sm:text-4xl lg:text-5xl font-bold;
+  }
+
+  .text-title {
+    @apply text-2xl sm:text-3xl font-bold;
+  }
+
+  .text-subtitle {
+    @apply text-lg sm:text-xl font-semibold;
+  }
+
+  /* Enhanced shadows */
+  .shadow-soft {
+    @apply shadow-lg shadow-gray-900/10;
+  }
+
+  .shadow-medium {
+    @apply shadow-xl shadow-gray-900/15;
+  }
+
+  .shadow-strong {
+    @apply shadow-2xl shadow-gray-900/20;
+  } 

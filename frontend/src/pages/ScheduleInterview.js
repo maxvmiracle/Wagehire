@@ -64,9 +64,13 @@ const ScheduleInterview = () => {
     if (!formData.scheduled_date) {
       newErrors.scheduled_date = 'Please select a date';
     } else {
-      const selectedDate = new Date(formData.scheduled_date);
+      // Parse the date string properly (YYYY-MM-DD format from input)
+      const [year, month, day] = formData.scheduled_date.split('-').map(Number);
+      const selectedDate = new Date(year, month - 1, day); // month is 0-indexed
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      
       if (selectedDate < today) {
         newErrors.scheduled_date = 'Date cannot be in the past';
       }
@@ -151,7 +155,7 @@ const ScheduleInterview = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div className="max-w-9xl mx-auto p-4 sm:p-6 lg:p-8">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl p-8 text-white mb-8">
         <div className="flex items-center space-x-4 mb-6">
@@ -183,7 +187,7 @@ const ScheduleInterview = () => {
         
         <form onSubmit={handleSubmit} className="p-8 space-y-8">
           {/* Company and Job Information */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <Building className="w-5 h-5 mr-2 text-primary-600" />
@@ -248,6 +252,63 @@ const ScheduleInterview = () => {
                   <p className="mt-2 text-sm text-danger-600">{errors.salary_range}</p>
                 )}
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <MapPin className="inline-block w-4 h-4 mr-2" />
+                  Location
+                </label>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  placeholder="e.g., Remote, Office, Meeting Room 1, or Zoom Link"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Clock className="w-5 h-5 mr-2 text-primary-600" />
+                Schedule Details
+              </h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <Calendar className="inline-block w-4 h-4 mr-2" />
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  name="scheduled_date"
+                  value={formData.scheduled_date}
+                  onChange={handleChange}
+                  min={new Date().toISOString().split('T')[0]}
+                  className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300 ${errors.scheduled_date ? 'border-danger-500' : ''}`}
+                />
+                {errors.scheduled_date && (
+                  <p className="mt-2 text-sm text-danger-600">{errors.scheduled_date}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <Clock className="inline-block w-4 h-4 mr-2" />
+                  Time *
+                </label>
+                <input
+                  type="time"
+                  name="scheduled_time"
+                  value={formData.scheduled_time}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300 ${errors.scheduled_time ? 'border-danger-500' : ''}`}
+                />
+                {errors.scheduled_time && (
+                  <p className="mt-2 text-sm text-danger-600">{errors.scheduled_time}</p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -270,41 +331,8 @@ const ScheduleInterview = () => {
             </p>
           </div>
 
-          {/* Date and Time */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                <Calendar className="inline-block w-4 h-4 mr-2" />
-                Date *
-              </label>
-              <input
-                type="date"
-                name="scheduled_date"
-                value={formData.scheduled_date}
-                onChange={handleChange}
-                min={new Date().toISOString().split('T')[0]}
-                className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300 ${errors.scheduled_date ? 'border-danger-500' : ''}`}
-              />
-              {errors.scheduled_date && (
-                <p className="mt-2 text-sm text-danger-600">{errors.scheduled_date}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                <Clock className="inline-block w-4 h-4 mr-2" />
-                Time *
-              </label>
-              <input
-                type="time"
-                name="scheduled_time"
-                value={formData.scheduled_time}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300 ${errors.scheduled_time ? 'border-danger-500' : ''}`}
-              />
-              {errors.scheduled_time && (
-                <p className="mt-2 text-sm text-danger-600">{errors.scheduled_time}</p>
-              )}
-            </div>
+          {/* Interview Details */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <AlertCircle className="inline-block w-4 h-4 mr-2" />
@@ -323,10 +351,6 @@ const ScheduleInterview = () => {
                 <p className="mt-2 text-sm text-danger-600">{errors.round_number}</p>
               )}
             </div>
-          </div>
-
-          {/* Duration and Type */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <Clock className="inline-block w-4 h-4 mr-2" />
@@ -369,22 +393,20 @@ const ScheduleInterview = () => {
                 <p className="mt-2 text-sm text-danger-600">{errors.interview_type}</p>
               )}
             </div>
-          </div>
-
-          {/* Location */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              <MapPin className="inline-block w-4 h-4 mr-2" />
-              Location
-            </label>
-            <input
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              placeholder="e.g., Remote, Office, Meeting Room 1, or Zoom Link"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                <User className="inline-block w-4 h-4 mr-2" />
+                Interviewer Name
+              </label>
+              <input
+                type="text"
+                name="interviewer_name"
+                value={formData.interviewer_name}
+                onChange={handleChange}
+                placeholder="Enter interviewer's name"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300"
+              />
+            </div>
           </div>
 
           {/* Company Information */}
@@ -448,21 +470,7 @@ const ScheduleInterview = () => {
           </div>
 
           {/* Interviewer Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                <User className="inline-block w-4 h-4 mr-2" />
-                Interviewer Name
-              </label>
-              <input
-                type="text"
-                name="interviewer_name"
-                value={formData.interviewer_name}
-                onChange={handleChange}
-                placeholder="Enter interviewer's name"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-300"
-              />
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <Mail className="inline-block w-4 h-4 mr-2" />

@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const database = require('../database/connection');
+const { run, get, all } = require('../database/db');
 const { authenticateToken, requireAdmin } = require('./auth');
 
 const router = express.Router();
@@ -39,7 +39,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     
     query += ' ORDER BY name ASC';
     
-    const users = await database.all(query, params);
+    const users = await all(query, params);
     
     res.json({ users });
     
@@ -54,7 +54,7 @@ router.get('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
-    const user = await database.get(
+    const user = await get(
       'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at FROM users WHERE id = ?',
       [id]
     );
@@ -64,7 +64,7 @@ router.get('/:id', authenticateToken, requireAdmin, async (req, res) => {
     }
     
     // Get interviews for this candidate
-    const interviews = await database.all(`
+    const interviews = await all(`
       SELECT 
         i.*,
         u.name as candidate_name,
@@ -113,7 +113,7 @@ router.get('/me/interviews', authenticateToken, async (req, res) => {
     
     query += ' ORDER BY i.scheduled_date DESC';
     
-    const interviews = await database.all(query, params);
+    const interviews = await all(query, params);
     
     res.json({ interviews });
     
@@ -127,14 +127,14 @@ router.get('/me/interviews', authenticateToken, async (req, res) => {
 router.get('/me/dashboard', authenticateToken, async (req, res) => {
   try {
     // Get total interviews conducted
-    const totalInterviews = await database.get(`
+    const totalInterviews = await get(`
       SELECT COUNT(*) as count 
       FROM interviews 
       WHERE candidate_id = ?
     `, [req.user.userId]);
     
     // Get interviews by status
-    const interviewsByStatus = await database.all(`
+    const interviewsByStatus = await all(`
       SELECT status, COUNT(*) as count 
       FROM interviews 
       WHERE candidate_id = ?
@@ -142,7 +142,7 @@ router.get('/me/dashboard', authenticateToken, async (req, res) => {
     `, [req.user.userId]);
     
     // Get upcoming interviews (next 7 days)
-    const upcomingInterviews = await database.get(`
+    const upcomingInterviews = await get(`
       SELECT COUNT(*) as count 
       FROM interviews 
       WHERE candidate_id = ? 
@@ -151,7 +151,7 @@ router.get('/me/dashboard', authenticateToken, async (req, res) => {
     `, [req.user.userId]);
     
     // Get today's interviews
-    const todaysInterviews = await database.get(`
+    const todaysInterviews = await get(`
       SELECT COUNT(*) as count 
       FROM interviews 
       WHERE candidate_id = ? 
@@ -160,7 +160,7 @@ router.get('/me/dashboard', authenticateToken, async (req, res) => {
     `, [req.user.userId]);
     
     // Get recent feedback received
-    const recentFeedback = await database.get(`
+    const recentFeedback = await get(`
       SELECT COUNT(*) as count 
       FROM interview_feedback 
       WHERE candidate_id = ? 
@@ -168,7 +168,7 @@ router.get('/me/dashboard', authenticateToken, async (req, res) => {
     `, [req.user.userId]);
     
     // Get profile completion percentage
-    const user = await database.get(`
+    const user = await get(`
       SELECT name, email, phone, resume_url, current_position, experience_years, skills 
       FROM users WHERE id = ?
     `, [req.user.userId]);
@@ -255,7 +255,7 @@ router.put('/me', [
     
     // Check email uniqueness if email is being updated
     if (email) {
-      const emailExists = await database.get(
+      const emailExists = await get(
         'SELECT id FROM users WHERE email = ? AND id != ?',
         [email, req.user.userId]
       );
@@ -277,12 +277,12 @@ router.put('/me', [
     fields.push('updated_at = CURRENT_TIMESTAMP');
     values.push(req.user.userId);
     
-    await database.run(`
+    await run(`
       UPDATE users SET ${fields.join(', ')} WHERE id = ?
     `, values);
     
     // Get updated user
-    const updatedUser = await database.get(
+    const updatedUser = await get(
       'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at FROM users WHERE id = ?',
       [req.user.userId]
     );

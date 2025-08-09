@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const database = require('../database/connection');
+const { run, get, all } = require('../database/db');
 const { authenticateToken, requireAdmin } = require('./auth');
 
 const router = express.Router();
@@ -45,7 +45,7 @@ router.get('/', authenticateToken, async (req, res) => {
     
     query += ' ORDER BY created_at DESC';
     
-    const candidates = await database.all(query, params);
+    const candidates = await all(query, params);
     
     res.json({ candidates });
     
@@ -69,14 +69,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
       params.push(req.user.userId);
     }
     
-    const candidate = await database.get(query, params);
+    const candidate = await get(query, params);
     
     if (!candidate) {
       return res.status(404).json({ error: 'Candidate not found' });
     }
     
     // Get interviews for this candidate
-    const interviews = await database.all(`
+    const interviews = await all(`
       SELECT 
         i.*,
         u.name as interviewer_name,
@@ -113,7 +113,7 @@ router.post('/', [
     const { name, email, phone, resume_url, notes } = req.body;
     
     // Check if candidate already exists
-    const existingCandidate = await database.get(
+    const existingCandidate = await get(
       'SELECT id FROM candidates WHERE email = ?',
       [email]
     );
@@ -123,13 +123,13 @@ router.post('/', [
     }
     
     // Create candidate with user_id
-    const result = await database.run(`
+    const result = await run(`
       INSERT INTO candidates (name, email, phone, resume_url, notes, status, user_id)
       VALUES (?, ?, ?, ?, ?, 'pending', ?)
     `, [name, email, phone, resume_url, notes, req.user.userId]);
     
     // Get the created candidate
-    const newCandidate = await database.get(
+    const newCandidate = await get(
       'SELECT * FROM candidates WHERE id = ?',
       [result.id]
     );
@@ -168,7 +168,7 @@ router.put('/:id', [
       params.push(req.user.userId);
     }
     
-    const existingCandidate = await database.get(query, params);
+    const existingCandidate = await get(query, params);
     
     if (!existingCandidate) {
       return res.status(404).json({ error: 'Candidate not found' });
@@ -176,7 +176,7 @@ router.put('/:id', [
     
     // Check email uniqueness if email is being updated
     if (updateFields.email && updateFields.email !== existingCandidate.email) {
-      const emailExists = await database.get(
+      const emailExists = await get(
         'SELECT id FROM candidates WHERE email = ? AND id != ?',
         [updateFields.email, id]
       );
@@ -204,12 +204,12 @@ router.put('/:id', [
     fields.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);
     
-    await database.run(`
+    await run(`
       UPDATE candidates SET ${fields.join(', ')} WHERE id = ?
     `, values);
     
     // Get updated candidate
-    const updatedCandidate = await database.get(
+    const updatedCandidate = await get(
       'SELECT * FROM candidates WHERE id = ?',
       [id]
     );
@@ -239,14 +239,14 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       params.push(req.user.userId);
     }
     
-    const candidate = await database.get(query, params);
+    const candidate = await get(query, params);
     
     if (!candidate) {
       return res.status(404).json({ error: 'Candidate not found' });
     }
     
     // Check if candidate has interviews
-    const interviews = await database.get(
+    const interviews = await get(
       'SELECT id FROM interviews WHERE candidate_id = ?',
       [id]
     );
@@ -258,7 +258,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
     
     // Delete candidate
-    await database.run('DELETE FROM candidates WHERE id = ?', [id]);
+    await run('DELETE FROM candidates WHERE id = ?', [id]);
     
     res.json({ message: 'Candidate deleted successfully' });
     
@@ -281,13 +281,13 @@ router.get('/stats/overview', authenticateToken, async (req, res) => {
     }
     
     // Get total candidates
-    const totalCandidates = await database.get(
+    const totalCandidates = await get(
       `SELECT COUNT(*) as count FROM candidates ${whereClause}`,
       params
     );
     
     // Get candidates by status
-    const statusStats = await database.all(`
+    const statusStats = await all(`
       SELECT status, COUNT(*) as count 
       FROM candidates 
       ${whereClause}
@@ -295,14 +295,14 @@ router.get('/stats/overview', authenticateToken, async (req, res) => {
     `, params);
     
     // Get recent candidates (last 30 days)
-    const recentCandidates = await database.get(`
+    const recentCandidates = await get(`
       SELECT COUNT(*) as count 
       FROM candidates 
       ${whereClause ? whereClause + ' AND' : 'WHERE'} created_at >= datetime('now', '-30 days')
     `, params);
     
     // Get candidates with interviews
-    const candidatesWithInterviews = await database.get(`
+    const candidatesWithInterviews = await get(`
       SELECT COUNT(DISTINCT i.candidate_id) as count 
       FROM interviews i
       JOIN candidates c ON i.candidate_id = c.id

@@ -68,13 +68,13 @@ const InterviewDetail = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-6 h-6 text-success-600" />;
+        return <CheckCircle className="w-5 h-5 text-success-600" />;
       case 'cancelled':
-        return <XCircle className="w-6 h-6 text-danger-600" />;
+        return <XCircle className="w-5 h-5 text-danger-600" />;
       case 'scheduled':
-        return <AlertCircle className="w-6 h-6 text-primary-600" />;
+        return <AlertCircle className="w-5 h-5 text-primary-600" />;
       default:
-        return <AlertCircle className="w-6 h-6 text-warning-600" />;
+        return <AlertCircle className="w-5 h-5 text-warning-600" />;
     }
   };
 
@@ -113,17 +113,17 @@ const InterviewDetail = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
       </div>
     );
   }
 
   if (!interview) {
     return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-medium text-gray-900">Interview not found</h3>
-        <p className="text-gray-500 mt-2">The interview you're looking for doesn't exist.</p>
-        <Link to="/interviews" className="btn btn-primary mt-4">
+      <div className="text-center py-10">
+        <h3 className="text-base font-medium text-gray-900">Interview not found</h3>
+        <p className="text-gray-500 mt-1.5 text-sm">The interview you're looking for doesn't exist.</p>
+        <Link to="/interviews" className="btn btn-primary mt-3">
           Back to Interviews
         </Link>
       </div>
@@ -131,35 +131,35 @@ const InterviewDetail = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="detail-responsive">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="header-responsive">
         <div className="flex items-center space-x-4">
           <Link
             to="/interviews"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200 touch-target"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-      <div>
-            <h1 className="text-3xl font-bold text-gray-900">Interview Details</h1>
-            <p className="text-gray-600 mt-1">View complete interview information</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold text-gray-900 overflow-safe">Interview Details</h1>
+            <p className="text-gray-600 mt-1 overflow-safe text-base">View complete interview information</p>
           </div>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-wrap gap-2">
           {interview.status === 'scheduled' && (
             <>
               <Link
                 to={`/interviews/${id}/edit`}
-                className="btn btn-secondary flex items-center shadow-sm"
+                className="btn btn-secondary flex items-center shadow-sm btn-responsive"
               >
                 <Edit className="w-4 h-4 mr-2" />
                 Edit
               </Link>
               <button
                 onClick={handleDeleteInterview}
-                className="btn btn-danger flex items-center shadow-sm"
+                className="btn btn-danger flex items-center shadow-sm btn-responsive"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
@@ -170,69 +170,69 @@ const InterviewDetail = () => {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="detail-grid">
         {/* Left Column - Main Info */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="detail-main">
           {/* Interview Header Card */}
           <div className="bg-white rounded-2xl shadow-lg border-0 overflow-hidden">
-            <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-8 text-white">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
+            <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-responsive text-white">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-1.5">
+                <div className="flex items-center space-x-2">
                   {getStatusIcon(interview.status)}
-                  <span className={`px-4 py-2 text-sm font-semibold rounded-full border ${getStatusColor(interview.status)} bg-white`}>
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(interview.status)} bg-white`}>
                     {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                   </span>
                 </div>
               </div>
-              <h2 className="text-3xl font-bold mb-2">
+              <h2 className="text-responsive-xl font-bold mb-1.5 overflow-safe">
                 {interview.company_name}
               </h2>
-              <p className="text-xl text-primary-100">
+              <p className="text-responsive-lg text-primary-100 overflow-safe">
                 {interview.job_title}
               </p>
             </div>
             
-            <div className="p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-primary-600" />
+            <div className="p-responsive">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-primary-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Date</p>
-                    <p className="text-lg font-semibold text-gray-900">{formatInterviewDate(interview.scheduled_date)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Date</p>
+                    <p className="text-sm font-semibold text-gray-900 overflow-safe">{formatInterviewDate(interview.scheduled_date)}</p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-blue-600" />
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-5 h-5 text-blue-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Time</p>
-                    <p className="text-lg font-semibold text-gray-900">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Time</p>
+                    <p className="text-sm font-semibold text-gray-900 overflow-safe">
                       {formatInterviewTime(interview.scheduled_date)} ({interview.duration} minutes)
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                    <MapPin className="w-6 h-6 text-green-600" />
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-5 h-5 text-green-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Location</p>
-                    <p className="text-lg font-semibold text-gray-900">{interview.location || 'Remote'}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Location</p>
+                    <p className="text-sm font-semibold text-gray-900 overflow-safe">{interview.location || 'Remote'}</p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Award className="w-6 h-6 text-purple-600" />
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Award className="w-5 h-5 text-purple-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Round</p>
-                    <p className="text-lg font-semibold text-gray-900">Round {interview.round_number}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Round</p>
+                    <p className="text-sm font-semibold text-gray-900 overflow-safe">Round {interview.round_number}</p>
                   </div>
                 </div>
               </div>
@@ -241,32 +241,32 @@ const InterviewDetail = () => {
 
           {/* Interviewer Information */}
           {(interview.interviewer_name || interview.interviewer_email || interview.interviewer_position) && (
-            <div className="bg-white rounded-2xl shadow-lg border-0 p-8">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <User className="w-5 h-5 text-blue-600" />
+            <div className="bg-white rounded-2xl shadow-lg border-0 p-responsive">
+              <div className="flex items-center space-x-2.5 mb-4">
+                <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Interviewer Information</h3>
+                <h3 className="text-responsive-lg font-bold text-gray-900">Interviewer Information</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {interview.interviewer_name && (
-                  <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                    <User className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Name</p>
-                      <p className="font-semibold text-gray-900">{interview.interviewer_name}</p>
+                  <div className="flex items-center space-x-2.5 p-3 bg-gray-50 rounded-xl">
+                    <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-gray-500">Name</p>
+                      <p className="font-semibold text-gray-900 overflow-safe text-sm">{interview.interviewer_name}</p>
                     </div>
                   </div>
                 )}
                 
                 {interview.interviewer_email && (
-                  <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                    <Mail className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Email</p>
+                  <div className="flex items-center space-x-2.5 p-3 bg-gray-50 rounded-xl">
+                    <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-gray-500">Email</p>
                       <a 
                         href={`mailto:${interview.interviewer_email}`}
-                        className="font-semibold text-primary-600 hover:text-primary-700"
+                        className="font-semibold text-primary-600 hover:text-primary-700 overflow-safe break-all text-sm"
                       >
                         {interview.interviewer_email}
                       </a>
@@ -275,11 +275,11 @@ const InterviewDetail = () => {
                 )}
                 
                 {interview.interviewer_position && (
-                  <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                    <Briefcase className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Position</p>
-                      <p className="font-semibold text-gray-900">{interview.interviewer_position}</p>
+                  <div className="flex items-center space-x-2.5 p-3 bg-gray-50 rounded-xl">
+                    <Briefcase className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-gray-500">Position</p>
+                      <p className="font-semibold text-gray-900 overflow-safe text-sm">{interview.interviewer_position}</p>
                     </div>
                   </div>
                 )}
@@ -287,122 +287,73 @@ const InterviewDetail = () => {
             </div>
           )}
 
-          {/* Job Details */}
-          <div className="bg-white rounded-2xl shadow-lg border-0 p-8">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                <Briefcase className="w-5 h-5 text-green-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900">Job Details</h3>
-            </div>
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <p className="text-sm font-medium text-gray-500 mb-1">Position</p>
-                <p className="text-lg font-semibold text-gray-900">{interview.job_title}</p>
-              </div>
-              
-              {interview.salary_range && (
-                <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                  <DollarSign className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Salary Range</p>
-                    <p className="font-semibold text-gray-900">{interview.salary_range}</p>
-                  </div>
-                </div>
-              )}
-              
-              {interview.job_description && (
-                <div className="p-4 bg-gray-50 rounded-xl">
-                  <p className="text-sm font-medium text-gray-500 mb-2">Description</p>
-                  <p className="text-gray-700 leading-relaxed">
-                    {interview.job_description}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Notes */}
-          {interview.notes && (
-            <div className="bg-white rounded-2xl shadow-lg border-0 p-8">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-yellow-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">Notes</h3>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <p className="text-gray-700 leading-relaxed">{interview.notes}</p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right Column - Company Info */}
-        <div className="space-y-6">
+        <div className="detail-sidebar">
           {/* Company Information */}
-          <div className="bg-white rounded-2xl shadow-lg border-0 p-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Building className="w-5 h-5 text-blue-600" />
+          <div className="bg-white rounded-2xl shadow-lg border-0 p-responsive">
+            <div className="flex items-center space-x-2.5 mb-4">
+              <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Building className="w-4 h-4 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Company</h3>
+              <h3 className="text-responsive-lg font-bold text-gray-900">Company</h3>
             </div>
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <p className="text-sm font-medium text-gray-500 mb-1">Company Name</p>
-                <p className="font-semibold text-gray-900">{interview.company_name}</p>
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <p className="text-xs font-medium text-gray-500 mb-0.5">Company Name</p>
+                <p className="font-semibold text-gray-900 overflow-safe text-sm">{interview.company_name}</p>
               </div>
               
               {interview.company_website && (
-                <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                  <Globe className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Website</p>
+                <div className="flex items-center space-x-2.5 p-3 bg-gray-50 rounded-xl">
+                  <Globe className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Website</p>
                     <a 
                       href={interview.company_website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-semibold text-primary-600 hover:text-primary-700 flex items-center"
+                      className="font-semibold text-primary-600 hover:text-primary-700 flex items-center overflow-safe break-all text-sm"
                     >
                       Visit Website
-                      <ExternalLink className="w-3 h-3 ml-1" />
+                      <ExternalLink className="w-2.5 h-2.5 ml-1 flex-shrink-0" />
                     </a>
                   </div>
                 </div>
               )}
               
               {interview.company_linkedin_url && (
-                <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                  <Linkedin className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">LinkedIn</p>
+                <div className="flex items-center space-x-2.5 p-3 bg-gray-50 rounded-xl">
+                  <Linkedin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">LinkedIn</p>
                     <a 
                       href={interview.company_linkedin_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-semibold text-primary-600 hover:text-primary-700 flex items-center"
+                      className="font-semibold text-primary-600 hover:text-primary-700 flex items-center overflow-safe break-all text-sm"
                     >
                       View Company
-                      <ExternalLink className="w-3 h-3 ml-1" />
+                      <ExternalLink className="w-2.5 h-2.5 ml-1 flex-shrink-0" />
                     </a>
                   </div>
                 </div>
               )}
               
               {interview.other_urls && (
-                <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                  <LinkIcon className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Other Links</p>
-                    <div className="text-sm text-gray-600 space-y-1">
+                <div className="flex items-center space-x-2.5 p-3 bg-gray-50 rounded-xl">
+                  <LinkIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-500">Other Links</p>
+                    <div className="text-xs text-gray-600 space-y-0.5">
                       {interview.other_urls.split(',').map((url, index) => (
                         <a 
                           key={index}
                           href={url.trim()}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary-600 hover:text-primary-700 block"
+                          className="text-primary-600 hover:text-primary-700 block overflow-safe break-all"
                         >
                           {url.trim()}
                         </a>
@@ -415,17 +366,61 @@ const InterviewDetail = () => {
           </div>
 
           {/* Interview Type */}
-          <div className="bg-white rounded-2xl shadow-lg border-0 p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-purple-600" />
+          <div className="bg-white rounded-2xl shadow-lg border-0 p-responsive">
+            <div className="flex items-center space-x-2.5 mb-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-4 h-4 text-purple-600" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900">Interview Type</h3>
+              <h3 className="text-base font-bold text-gray-900">Interview Type</h3>
             </div>
-            <div className="p-4 bg-gray-50 rounded-xl">
-              <p className="text-sm font-medium text-gray-500 mb-1">Type</p>
-              <p className="font-semibold text-gray-900 capitalize">{interview.interview_type}</p>
+            <div className="p-3 bg-gray-50 rounded-xl">
+              <p className="text-xs font-medium text-gray-500 mb-0.5">Type</p>
+              <p className="font-semibold text-gray-900 capitalize overflow-safe text-sm">{interview.interview_type}</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Job Details - Full Width */}
+      <div className="bg-white rounded-2xl shadow-lg border-0 p-responsive">
+        <div className="flex items-center space-x-2.5 mb-4">
+          <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Briefcase className="w-4 h-4 text-green-600" />
+          </div>
+          <h3 className="text-responsive-lg font-bold text-gray-900">Job Details</h3>
+        </div>
+        <div className="space-y-3">
+          <div className="p-3 bg-gray-50 rounded-xl">
+            <p className="text-xs font-medium text-gray-500 mb-0.5">Position</p>
+            <p className="text-sm font-semibold text-gray-900 overflow-safe">{interview.job_title}</p>
+          </div>
+          
+          {interview.salary_range && (
+            <div className="flex items-center space-x-2.5 p-3 bg-gray-50 rounded-xl">
+              <DollarSign className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-gray-500">Salary Range</p>
+                <p className="font-semibold text-gray-900 overflow-safe text-sm">{interview.salary_range}</p>
+              </div>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {interview.job_description && (
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <p className="text-xs font-medium text-gray-500 mb-1.5">Description</p>
+                <p className="text-gray-700 leading-relaxed overflow-safe text-sm">
+                  {interview.job_description}
+                </p>
+              </div>
+            )}
+            
+            {interview.notes && (
+              <div className="p-3 bg-gray-50 rounded-xl">
+                <p className="text-xs font-medium text-gray-500 mb-1.5">Notes</p>
+                <p className="text-gray-700 leading-relaxed overflow-safe text-sm">{interview.notes}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

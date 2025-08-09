@@ -13,7 +13,9 @@ import {
   BarChart3,
   Shield,
   UserCog,
-  UserX
+  UserX,
+  X,
+  Briefcase
 } from 'lucide-react';
 
 const Layout = () => {
@@ -99,146 +101,202 @@ const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+        <div 
+          className="mobile-nav-overlay"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <div
-        className={`fixed left-4 top-1/2 transform -translate-y-1/2 z-50 bg-white shadow-xl rounded-2xl transition-all duration-300 ease-in-out flex flex-col lg:block ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } w-16 h-80`}
-      >
+      {/* Mobile sidebar */}
+      <div className={`mobile-nav ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex flex-col h-full">
+          {/* Mobile sidebar header */}
+          <div className="p-3 border-b border-gray-200/50">
+            <div className="flex items-center justify-between">
+              <div className="wagehire-logo">
+                <div className="wagehire-logo-icon">
+                  <Briefcase className="w-5 h-5 text-white" />
+                </div>
+                <span className="wagehire-logo-text">Wagehire</span>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-target"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
 
-        {/* Main Navigation - Centered vertically */}
-        <div className="flex flex-col justify-center items-center h-full">
-          <div className="space-y-2">
+          {/* Mobile navigation */}
+          <nav className="flex-1 p-3 space-y-1">
             {mainNavigation.map((item) => {
               const Icon = item.icon;
               const isProfileItem = item.name === 'My Profile';
               const isProfileComplete = profileCompletion === 100;
               
               return (
-                <div key={item.name} className="relative group">
-                  <Link
-                    to={item.href}
-                    className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 transform group-hover:scale-110 ${
-                      isActive(item.href)
-                        ? 'bg-primary-100 text-primary-900 shadow-lg scale-105'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-md'
-                    }`}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <Icon
-                      className={`h-6 w-6 transition-all duration-300 ${
-                        isActive(item.href)
-                          ? 'text-primary-600'
-                          : isProfileItem && !isProfileComplete
-                          ? 'text-warning-500'
-                          : 'text-gray-400 group-hover:text-gray-600'
-                      }`}
-                    />
-                  </Link>
-                  
-                  {/* Tooltip */}
-                  <div className="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50">
-                    {item.name}
-                    {isProfileItem && !isProfileComplete && (
-                      <div className="text-xs text-warning-300 mt-1">
-                        {profileCompletion}% Complete
-                      </div>
-                    )}
-                    <div className="absolute right-full top-1/2 transform -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
-                  </div>
-                </div>
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center p-2.5 rounded-xl transition-colors touch-target ${
+                    isActive(item.href)
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className="h-4 w-4 mr-3 flex-shrink-0" />
+                  <span className="font-medium text-sm">{item.name}</span>
+                  {isProfileItem && !isProfileComplete && (
+                    <span className="ml-auto px-1.5 py-0.5 text-xs bg-warning-100 text-warning-700 rounded-full">
+                      {profileCompletion}%
+                    </span>
+                  )}
+                </Link>
               );
             })}
+          </nav>
+
+          {/* Mobile sidebar footer */}
+          <div className="p-3 border-t border-gray-200/50">
+            <div className="flex items-center p-2.5 rounded-xl bg-gray-50">
+              <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <User className="w-3 h-3 text-primary-600" />
+              </div>
+              <div className="ml-3 min-w-0 flex-1">
+                <p className="text-xs font-medium text-gray-900 truncate">{user?.name}</p>
+                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full mt-2 p-2.5 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center touch-target"
+            >
+              <LogOut className="w-4 h-4 mr-3" />
+              <span className="text-sm">Logout</span>
+            </button>
           </div>
         </div>
+      </div>
 
+      {/* Desktop sidebar */}
+      <div className="sidebar-responsive">
+        <div className="flex flex-col items-center space-y-4">
+          {mainNavigation.map((item) => {
+            const Icon = item.icon;
+            const isProfileItem = item.name === 'My Profile';
+            const isProfileComplete = profileCompletion === 100;
+            
+            return (
+              <div key={item.name} className="group relative">
+                <Link
+                  to={item.href}
+                  className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 touch-target hover:scale-150 hover:shadow-2xl hover:-translate-y-1 ${
+                    isActive(item.href)
+                      ? 'bg-white/90 text-primary-700 shadow-lg'
+                      : 'text-white hover:bg-white/20'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  {isProfileItem && !isProfileComplete && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-warning-500 rounded-full"></div>
+                  )}
+                </Link>
+                
+                {/* Tooltip */}
+                <div className="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50">
+                  {item.name}
+                  {isProfileItem && !isProfileComplete && (
+                    <div className="text-xs text-warning-300 mt-1">
+                      {profileCompletion}% Complete
+                    </div>
+                  )}
+                  <div className="absolute right-full top-1/2 transform -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Main content */}
-      <div className="min-h-screen">
+      <div className="content-wrapper">
         {/* Mobile top bar */}
-        <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b border-gray-200">
-          <div className="flex items-center justify-between px-4 py-3">
+        <div className="mobile-top-bar">
+          <div className="flex items-center justify-between px-3 py-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 touch-target"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-4 h-4" />
             </button>
-            <div className="flex items-center space-x-2">
-              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                <Bell className="w-5 h-5" />
+            <div className="flex items-center space-x-1.5">
+              <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg touch-target">
+                <Bell className="w-4 h-4" />
               </button>
               <Link
                 to="/profile"
-                className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900"
+                className="flex items-center space-x-1.5 text-xs text-white hover:text-white/80 backdrop-blur-md rounded-xl px-2 py-1.5 transition-all duration-300 hover:scale-105 touch-target border border-white/20"
               >
-                <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-primary-600" />
+                <div className="w-6 h-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                  <User className="w-3 h-3 text-white" />
                 </div>
-                <span className="font-medium">{user?.name}</span>
+                <span className="font-medium truncate max-w-[80px]">{user?.name}</span>
                 {isAdmin() && (
-                  <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full">
+                  <span className="text-xs bg-white/20 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-full">
                     Admin
                   </span>
                 )}
               </Link>
               <button
                 onClick={handleLogout}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded-lg"
+                className="p-1.5 text-white hover:text-white/80 backdrop-blur-md rounded-xl transition-all duration-300 hover:scale-105 touch-target border border-white/20"
                 title="Logout"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Page content */}
-        <main className="min-h-screen bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Top bar with user info - positioned absolute */}
-            <div className="hidden lg:flex items-center justify-end absolute top-4 right-4 z-10">
-              <div className="flex items-center space-x-2">
-                <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg transition-colors shadow-sm">
-                  <Bell className="w-5 h-5" />
-                </button>
-                <Link
-                  to="/profile"
-                  className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900 bg-white rounded-lg px-3 py-2 shadow-sm transition-colors"
-                >
-                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary-600" />
-                  </div>
-                  <span className="font-medium">{user?.name}</span>
-                  {isAdmin() && (
-                    <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full">
-                      Admin
-                    </span>
-                  )}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-white rounded-lg transition-colors shadow-sm"
-                  title="Logout"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </div>
+        <main className="content-main">
+          {/* Top bar with user info - positioned absolute for desktop */}
+          <div className="hidden lg:flex items-center justify-end absolute top-3 right-3 z-10">
+            <div className="flex items-center space-x-1.5">
+              <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white/90 backdrop-blur-sm rounded-lg transition-colors shadow-sm touch-target">
+                <Bell className="w-4 h-4" />
+              </button>
+              <Link
+                to="/profile"
+                className="flex items-center space-x-1.5 text-xs text-white hover:text-white/80 backdrop-blur-md rounded-xl px-3 py-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:-translate-y-1 border border-white/20"
+              >
+                <div className="w-6 h-6 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                  <User className="w-3 h-3 text-white" />
+                </div>
+                <span className="font-medium">{user?.name}</span>
+                {isAdmin() && (
+                  <span className="text-xs bg-white/20 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-full">
+                    Admin
+                  </span>
+                )}
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="p-2 text-white hover:text-white/80 backdrop-blur-md rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:-translate-y-1 border border-white/20 touch-target"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
-            
-            <div className="pt-16 lg:pt-20">
-              <Outlet />
-            </div>
+          </div>
+          
+          <div className="pt-12 lg:pt-16 pb-6">
+            <Outlet />
           </div>
         </main>
       </div>

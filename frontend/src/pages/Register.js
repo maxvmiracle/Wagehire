@@ -1,90 +1,26 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Eye, EyeOff, UserCheck, Phone, FileText, Briefcase, Award } from 'lucide-react';
+import { UserCheck, Eye, EyeOff, Phone, Briefcase, Calendar, MapPin, FileText, Briefcase as BriefcaseIcon } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const Register = () => {
+  const navigate = useNavigate();
+  const { register } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
-    confirmPassword: '',
     phone: '',
-    resume_url: '',
     current_position: '',
     experience_years: '',
-    skills: ''
+    skills: '',
+    password: '',
+    confirmPassword: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  
-  const { register } = useAuth();
-  const navigate = useNavigate();
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (formData.resume_url && !/^https?:\/\/.+/.test(formData.resume_url)) {
-      newErrors.resume_url = 'Please enter a valid URL';
-    }
-
-    if (formData.experience_years && (isNaN(formData.experience_years) || formData.experience_years < 0)) {
-      newErrors.experience_years = 'Please enter a valid number of years';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-
-    const result = await register({
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      password: formData.password,
-      phone: formData.phone.trim() || undefined,
-      resume_url: formData.resume_url.trim() || undefined,
-      current_position: formData.current_position.trim() || undefined,
-      experience_years: formData.experience_years ? parseInt(formData.experience_years) : undefined,
-      skills: formData.skills.trim() || undefined
-    });
-
-    if (result.success) {
-      navigate('/dashboard');
-    }
-    setLoading(false);
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -92,8 +28,7 @@ const Register = () => {
       ...prev,
       [name]: value
     }));
-    
-    // Clear error when user starts typing
+    // Clear error when field is modified
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -102,17 +37,79 @@ const Register = () => {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    
+    // Required fields validation
+    if (!formData.name.trim()) {
+      newErrors.name = 'Full name is required';
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+    
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    // Optional fields validation
+    if (formData.phone && !formData.phone.match(/^[\+]?[1-9][\d]{0,15}$/)) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+    
+    if (formData.experience_years && (formData.experience_years < 0 || formData.experience_years > 50)) {
+      newErrors.experience_years = 'Experience years must be between 0 and 50';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Please fill in all required fields correctly');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register(formData);
+      toast.success('Registration successful! Welcome to Wagehire');
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-lg bg-primary-600">
-            <UserCheck className="h-8 w-8 text-white" />
+          <div className="wagehire-logo justify-center mb-6">
+            <div className="wagehire-logo-icon">
+              <Briefcase className="h-8 w-8 text-white" />
+            </div>
+            <span className="wagehire-logo-text text-2xl">Wagehire</span>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
             Create your candidate account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-gray-300">
             Join Wagehire and start managing your interview journey
           </p>
         </div>
@@ -120,7 +117,7 @@ const Register = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="name" className="block text-sm font-medium text-white">
                 Full Name
               </label>
               <input
@@ -131,16 +128,16 @@ const Register = () => {
                 required
                 value={formData.name}
                 onChange={handleChange}
-                className={`mt-1 input ${errors.name ? 'border-danger-500' : ''}`}
+                className={`mt-1 input bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.name ? 'border-danger-500' : ''}`}
                 placeholder="Enter your full name"
               />
               {errors.name && (
-                <p className="mt-1 text-sm text-danger-600">{errors.name}</p>
+                <p className="mt-1 text-sm text-red-300">{errors.name}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-white">
                 Email address
               </label>
               <input
@@ -151,16 +148,16 @@ const Register = () => {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className={`mt-1 input ${errors.email ? 'border-danger-500' : ''}`}
+                className={`mt-1 input bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.email ? 'border-danger-500' : ''}`}
                 placeholder="Enter your email"
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-danger-600">{errors.email}</p>
+                <p className="mt-1 text-sm text-red-300">{errors.email}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="phone" className="block text-sm font-medium text-white">
                 Phone Number (Optional)
               </label>
               <div className="mt-1 relative">
@@ -172,36 +169,39 @@ const Register = () => {
                   autoComplete="tel"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="mt-1 input pl-10"
+                  className="mt-1 input pl-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500"
                   placeholder="Enter your phone number"
                 />
               </div>
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-300">{errors.phone}</p>
+              )}
             </div>
 
             <div>
-              <label htmlFor="current_position" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="current_position" className="block text-sm font-medium text-white">
                 Current Position (Optional)
               </label>
               <div className="mt-1 relative">
-                <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <BriefcaseIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   id="current_position"
                   name="current_position"
                   type="text"
                   value={formData.current_position}
                   onChange={handleChange}
-                  className="mt-1 input pl-10"
+                  className="mt-1 input pl-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500"
                   placeholder="e.g., Software Engineer, Frontend Developer"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="experience_years" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="experience_years" className="block text-sm font-medium text-white">
                 Years of Experience (Optional)
               </label>
               <div className="mt-1 relative">
-                <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   id="experience_years"
                   name="experience_years"
@@ -210,53 +210,35 @@ const Register = () => {
                   max="50"
                   value={formData.experience_years}
                   onChange={handleChange}
-                  className={`mt-1 input pl-10 ${errors.experience_years ? 'border-danger-500' : ''}`}
+                  className="mt-1 input pl-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500"
                   placeholder="e.g., 3"
                 />
               </div>
               {errors.experience_years && (
-                <p className="mt-1 text-sm text-danger-600">{errors.experience_years}</p>
+                <p className="mt-1 text-sm text-red-300">{errors.experience_years}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="skills" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="skills" className="block text-sm font-medium text-white">
                 Skills (Optional)
-              </label>
-              <textarea
-                id="skills"
-                name="skills"
-                rows="3"
-                value={formData.skills}
-                onChange={handleChange}
-                className="mt-1 input"
-                placeholder="e.g., JavaScript, React, Node.js, Python"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="resume_url" className="block text-sm font-medium text-gray-700">
-                Resume URL (Optional)
               </label>
               <div className="mt-1 relative">
                 <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  id="resume_url"
-                  name="resume_url"
-                  type="url"
-                  value={formData.resume_url}
+                <textarea
+                  id="skills"
+                  name="skills"
+                  rows="3"
+                  value={formData.skills}
                   onChange={handleChange}
-                  className={`mt-1 input pl-10 ${errors.resume_url ? 'border-danger-500' : ''}`}
-                  placeholder="https://example.com/resume.pdf"
+                  className="mt-1 input pl-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 resize-none"
+                  placeholder="e.g., JavaScript, React, Node.js, Python"
                 />
               </div>
-              {errors.resume_url && (
-                <p className="mt-1 text-sm text-danger-600">{errors.resume_url}</p>
-              )}
             </div>
-            
+
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-white">
                 Password
               </label>
               <div className="mt-1 relative">
@@ -268,7 +250,7 @@ const Register = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className={`input pr-10 ${errors.password ? 'border-danger-500' : ''}`}
+                  className={`input pr-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.password ? 'border-danger-500' : ''}`}
                   placeholder="Enter your password"
                 />
                 <button
@@ -284,12 +266,12 @@ const Register = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-danger-600">{errors.password}</p>
+                <p className="mt-1 text-sm text-red-300">{errors.password}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-white">
                 Confirm Password
               </label>
               <div className="mt-1 relative">
@@ -301,7 +283,7 @@ const Register = () => {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className={`input pr-10 ${errors.confirmPassword ? 'border-danger-500' : ''}`}
+                  className={`input pr-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.confirmPassword ? 'border-danger-500' : ''}`}
                   placeholder="Confirm your password"
                 />
                 <button
@@ -317,7 +299,7 @@ const Register = () => {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-danger-600">{errors.confirmPassword}</p>
+                <p className="mt-1 text-sm text-red-300">{errors.confirmPassword}</p>
               )}
             </div>
           </div>
@@ -331,17 +313,17 @@ const Register = () => {
               {loading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               ) : (
-                'Create Candidate Account'
+                'Create Account'
               )}
             </button>
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-300">
               Already have an account?{' '}
               <Link
                 to="/login"
-                className="font-medium text-primary-600 hover:text-primary-500"
+                className="font-medium text-primary-300 hover:text-primary-200"
               >
                 Sign in here
               </Link>

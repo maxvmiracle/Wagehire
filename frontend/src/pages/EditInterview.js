@@ -110,9 +110,13 @@ const EditInterview = () => {
     if (!formData.scheduled_date) {
       newErrors.scheduled_date = 'Please select a date';
     } else {
-      const selectedDate = new Date(formData.scheduled_date);
+      // Parse the date string properly (YYYY-MM-DD format from input)
+      const [year, month, day] = formData.scheduled_date.split('-').map(Number);
+      const selectedDate = new Date(year, month - 1, day); // month is 0-indexed
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      
       if (selectedDate < today) {
         newErrors.scheduled_date = 'Date cannot be in the past';
       }
@@ -159,8 +163,8 @@ const EditInterview = () => {
     }
     
     // Job description validation (if provided)
-    if (formData.job_description && formData.job_description.length > 500) {
-      newErrors.job_description = 'Job description must be less than 500 characters';
+    if (formData.job_description && formData.job_description.length > 1000) {
+      newErrors.job_description = 'Job description must be less than 1000 characters';
     }
     
     // Notes validation (if provided)
@@ -210,7 +214,7 @@ const EditInterview = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div className="max-w-9xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="bg-white shadow-lg rounded-2xl p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -479,14 +483,14 @@ const EditInterview = () => {
               onChange={handleChange}
               rows="4"
               placeholder="Brief description of the role and responsibilities..."
-              maxLength="500"
+              maxLength="1000"
               className={`input ${errors.job_description ? 'border-danger-500' : ''}`}
             />
             {errors.job_description && (
               <p className="mt-1 text-sm text-danger-600">{errors.job_description}</p>
             )}
             <p className="text-sm text-gray-500 mt-1">
-              {formData.job_description.length}/500 characters
+              {formData.job_description.length}/1000 characters
             </p>
           </div>
 
