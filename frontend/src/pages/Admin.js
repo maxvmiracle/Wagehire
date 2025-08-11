@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 import {
   Users,
   UserCheck,
@@ -33,10 +33,10 @@ const Admin = () => {
     const fetchAdminData = async () => {
       try {
         const [statsResponse, usersResponse, candidatesResponse, interviewsResponse] = await Promise.all([
-          axios.get('/api/admin/dashboard'),
-          axios.get('/api/admin/users'),
-          axios.get('/api/admin/candidates'),
-          axios.get('/api/admin/interviews?limit=5')
+          api.get('/admin/dashboard'),
+          api.get('/admin/users'),
+          api.get('/admin/candidates'),
+          api.get('/admin/interviews?limit=5')
         ]);
 
         setStats(statsResponse.data.stats);
@@ -55,7 +55,7 @@ const Admin = () => {
 
   const handleRoleChange = async (userId, newRole) => {
     try {
-      await axios.put(`/api/admin/users/${userId}/role`, { role: newRole });
+      await api.put(`/admin/users/${userId}/role`, { role: newRole });
       
       // Update local state
       setUsers(users.map(user => 
@@ -76,7 +76,7 @@ const Admin = () => {
     }
 
     try {
-      await axios.delete(`/api/admin/users/${userId}`);
+      await api.delete(`/admin/users/${userId}`);
       
       // Update local state
       setUsers(users.filter(user => user.id !== userId));

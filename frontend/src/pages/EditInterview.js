@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import api from '../services/api';
 import { 
   Calendar, Clock, MapPin, Building, FileText, AlertCircle, 
   Globe, User, DollarSign, Briefcase, Mail, Linkedin, Link,
@@ -38,7 +38,7 @@ const EditInterview = () => {
   const fetchInterview = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/interviews/${id}`);
+      const response = await api.get(`/interviews/${id}`);
       const interview = response.data.interview;
       
       // Convert the scheduled_date to separate date and time
@@ -190,7 +190,7 @@ const EditInterview = () => {
       // Combine date and time
       const scheduledDateTime = new Date(`${formData.scheduled_date}T${formData.scheduled_time}`).toISOString();
       
-      await axios.put(`/api/interviews/${id}`, {
+      await api.put(`/interviews/${id}`, {
         ...formData,
         scheduled_date: scheduledDateTime
       });

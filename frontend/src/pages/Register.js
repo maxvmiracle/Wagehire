@@ -68,7 +68,7 @@ const Register = () => {
       newErrors.phone = 'Please enter a valid phone number';
     }
     
-    if (formData.experience_years && (formData.experience_years < 0 || formData.experience_years > 50)) {
+    if (formData.experience_years && (parseInt(formData.experience_years) < 0 || parseInt(formData.experience_years) > 50)) {
       newErrors.experience_years = 'Experience years must be between 0 and 50';
     }
     
@@ -86,10 +86,60 @@ const Register = () => {
 
     setLoading(true);
     try {
-      await register(formData);
-      toast.success('Registration successful! Welcome to Wagehire');
-      navigate('/dashboard');
+      // Remove confirmPassword from the data sent to backend
+      const { confirmPassword, ...registrationData } = formData;
+      
+      // Convert experience_years to integer if it exists and is not empty
+      if (registrationData.experience_years && registrationData.experience_years !== '') {
+        registrationData.experience_years = parseInt(registrationData.experience_years, 10);
+      } else {
+        // Remove the field if it's empty
+        delete registrationData.experience_years;
+      }
+      
+      console.log('Sending registration data:', registrationData);
+      const result = await register(registrationData);
+      console.log('Registration result:', result);
+      if (result.success) {
+        if (result.isAdmin) {
+          // First user (admin) - no verification needed
+          console.log('Admin account created successfully');
+          toast.success('Admin account created successfully! You can now login.');
+          navigate('/login');
+        } else if (result.requiresVerification) {
+          console.log('Registration successful, requires manual verification');
+          
+          // Always show manual verification
+          const verificationUrl = result.verificationUrl;
+          if (result.manualVerification && verificationUrl) {
+            toast.success('Registration successful! Please use the verification link below to confirm your account.');
+            navigate('/verify-email', { 
+              state: { 
+                email: registrationData.email,
+                message: result.message || 'Please use the verification link below to confirm your account.',
+                verificationUrl: verificationUrl,
+                manualVerification: true,
+                verificationMessage: result.verificationMessage
+              }
+            });
+          } else {
+            toast.success('Registration successful! Please try the resend verification feature.');
+            navigate('/verify-email', { 
+              state: { 
+                email: registrationData.email,
+                message: 'Registration successful but verification failed. Please try resending the verification.'
+              }
+            });
+          }
+        } else {
+          console.log('Registration successful, navigating to dashboard');
+          navigate('/dashboard');
+        }
+      } else {
+        console.log('Registration failed:', result.error);
+      }
     } catch (error) {
+      console.error('Registration error in component:', error);
       toast.error(error.response?.data?.error || 'Registration failed');
     } finally {
       setLoading(false);

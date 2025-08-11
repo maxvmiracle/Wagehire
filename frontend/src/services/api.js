@@ -18,11 +18,22 @@ const api = axios.create({
   },
 });
 
-// Add token to requests if available
+// Add token to requests if available (except for auth endpoints)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // Don't add token for authentication endpoints
+  const authEndpoints = ['/auth/login', '/auth/register', '/auth/resend-verification', '/auth/manual-verification'];
+  const isAuthEndpoint = authEndpoints.some(endpoint => config.url?.includes(endpoint));
+  
+  if (!isAuthEndpoint) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Adding token to request:', config.url);
+    } else {
+      console.log('No token found for request:', config.url);
+    }
+  } else {
+    console.log('Auth endpoint - skipping token for:', config.url);
   }
   return config;
 });

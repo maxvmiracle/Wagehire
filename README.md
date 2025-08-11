@@ -98,6 +98,42 @@ npm run install-all
 ```
 
 #### 3. Environment Setup
+
+##### Email Configuration (Required for Email Verification)
+The application includes email verification functionality. To enable it:
+
+**Option 1: Interactive Setup (Recommended)**
+```bash
+cd backend
+npm run setup-email
+```
+
+**Option 2: Manual Setup**
+1. Copy the example environment file:
+   ```bash
+   cd backend
+   cp env.example .env
+   ```
+2. Edit `.env` and update the email configuration:
+   ```env
+   # Email Configuration (for Gmail)
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USER=your-email@gmail.com
+   EMAIL_PASS=your-app-password
+   
+   # Frontend URL (for email links)
+   FRONTEND_URL=http://localhost:3000
+   ```
+
+**Gmail Setup Instructions:**
+1. Enable 2-Factor Authentication on your Gmail account
+2. Generate an App Password:
+   - Go to Google Account settings → Security → 2-Step Verification → App passwords
+   - Select "Mail" and generate a password
+   - Use this 16-character password as EMAIL_PASS
+
+**For detailed email setup instructions, see [EMAIL_SETUP_GUIDE.md](EMAIL_SETUP_GUIDE.md)**
 Create a `.env` file in the backend directory:
 ```bash
 cd backend

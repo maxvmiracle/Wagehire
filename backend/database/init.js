@@ -8,11 +8,15 @@ async function initDatabase() {
     console.log('Starting database initialization...');
     
     db.serialize(() => {
-      // Drop existing tables to ensure clean schema
-      db.run('DROP TABLE IF EXISTS interview_feedback');
-      db.run('DROP TABLE IF EXISTS interviews');
-      db.run('DROP TABLE IF EXISTS candidates');
-      db.run('DROP TABLE IF EXISTS users');
+      // Only drop tables if explicitly requested (for development/testing)
+      // In production, we want to preserve data
+      if (process.env.RESET_DB === 'true') {
+        console.log('Resetting database tables...');
+        db.run('DROP TABLE IF EXISTS interview_feedback');
+        db.run('DROP TABLE IF EXISTS interviews');
+        db.run('DROP TABLE IF EXISTS candidates');
+        db.run('DROP TABLE IF EXISTS users');
+      }
 
       // Create users table (candidates) with updated role system
       db.run(`
@@ -27,6 +31,11 @@ async function initDatabase() {
           current_position TEXT,
           experience_years INTEGER,
           skills TEXT,
+          email_verified BOOLEAN DEFAULT 0,
+          email_verification_token TEXT,
+          email_verification_expires DATETIME,
+          password_reset_token TEXT,
+          password_reset_expires DATETIME,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import axios from 'axios';
+import api from '../services/api';
 import { 
   Calendar, Clock, MapPin, Building, FileText, AlertCircle, 
   Globe, User, Briefcase, Mail, Linkedin, Link,
@@ -139,15 +139,22 @@ const ScheduleInterview = () => {
       // Combine date and time
       const scheduledDateTime = new Date(`${formData.scheduled_date}T${formData.scheduled_time}`).toISOString();
       
-      await axios.post('/api/interviews', {
+      console.log('Scheduling interview with data:', {
+        ...formData,
+        scheduled_date: scheduledDateTime
+      });
+      
+      const response = await api.post('/interviews', {
         ...formData,
         scheduled_date: scheduledDateTime
       });
 
+      console.log('Interview scheduled successfully:', response.data);
       toast.success('Interview scheduled successfully!');
       navigate('/interviews');
     } catch (error) {
       console.error('Error scheduling interview:', error);
+      console.error('Error response:', error.response);
       toast.error(error.response?.data?.error || 'Failed to schedule interview');
     } finally {
       setLoading(false);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 import { 
   Users as UsersIcon, 
   Shield, 
@@ -31,7 +31,7 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('/api/users');
+      const response = await api.get('/users');
       setUsers(response.data.users);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -42,7 +42,7 @@ const Users = () => {
 
   const handleRoleChange = async (userId, newRole) => {
     try {
-      await axios.put(`/api/admin/users/${userId}/role`, { role: newRole });
+      await api.put(`/admin/users/${userId}/role`, { role: newRole });
       
       // Update local state
       setUsers(users.map(user => 
@@ -62,7 +62,7 @@ const Users = () => {
     }
 
     try {
-      await axios.delete(`/api/admin/users/${userId}`);
+      await api.delete(`/admin/users/${userId}`);
       
       // Update local state
       setUsers(users.filter(user => user.id !== userId));

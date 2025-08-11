@@ -3,6 +3,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { run, get, all } = require('../database/db');
+const { 
+  sendVerificationEmail, 
+  sendPasswordResetEmail, 
+  generateVerificationToken, 
+  generatePasswordResetToken 
+} = require('../services/emailService');
 
 const router = express.Router();
 
@@ -13,7 +19,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const validateRequest = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ 
+      error: errors.array()[0].msg,
+      errors: errors.array() 
+    });
   }
   next();
 };
@@ -40,6 +49,14 @@ router.post('/login', [
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Check if email is verified (except for admin users)
+    if (user.role !== 'admin' && !user.email_verified) {
+      return res.status(401).json({ 
+        error: 'Please verify your email address before logging in',
+        emailNotVerified: true 
+      });
     }
 
     // Generate JWT token
@@ -76,7 +93,7 @@ router.post('/register', [
   body('phone').optional().trim(),
   body('resume_url').optional().isURL(),
   body('current_position').optional().trim(),
-  body('experience_years').optional().isInt({ min: 0, max: 50 }),
+  body('experience_years').optional().isInt({ min: 0, max: 50 }).withMessage('Experience years must be a number between 0 and 50'),
   body('skills').optional().trim()
 ], validateRequest, async (req, res) => {
   try {
@@ -111,34 +128,58 @@ router.post('/register', [
     // If this is the first user, make them an admin, otherwise make them a candidate
     const userRole = isFirstUser ? 'admin' : 'candidate';
 
-    // Insert new user
-    const result = await run(
-      'INSERT INTO users (email, password, name, role, phone, resume_url, current_position, experience_years, skills) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [email, hashedPassword, name, userRole, phone, resume_url, current_position, experience_years, skills]
-    );
+    if (isFirstUser) {
+      // First user (admin) - no email verification required
+      const result = await run(
+        'INSERT INTO users (email, password, name, role, phone, resume_url, current_position, experience_years, skills, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+        [email, hashedPassword, name, userRole, phone, resume_url, current_position, experience_years, skills]
+      );
 
-    // Get the created user
-    const newUser = await get(
-      'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at FROM users WHERE id = ?',
-      [result.id]
-    );
+      // Get the created admin user
+      const newUser = await get(
+        'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, email_verified, created_at FROM users WHERE id = ?',
+        [result.id]
+      );
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId: newUser.id, 
-        email: newUser.email, 
-        role: newUser.role 
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+      res.status(201).json({
+        message: 'Admin account created successfully! You can now login.',
+        user: newUser,
+        emailVerificationSent: false,
+        requiresVerification: false,
+        isAdmin: true
+      });
+    } else {
+      // Subsequent users (candidates) - require email verification
+      const verificationToken = generateVerificationToken();
+      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    res.status(201).json({
-      message: 'Registration successful',
-      token,
-      user: newUser
-    });
+      const result = await run(
+        'INSERT INTO users (email, password, name, role, phone, resume_url, current_position, experience_years, skills, email_verification_token, email_verification_expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [email, hashedPassword, name, userRole, phone, resume_url, current_position, experience_years, skills, verificationToken, verificationExpires]
+      );
+
+      // Get the created user
+      const newUser = await get(
+        'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, email_verified, created_at FROM users WHERE id = ?',
+        [result.id]
+      );
+
+      // Send verification email
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const emailResult = await sendVerificationEmail(email, name, verificationToken, baseUrl);
+
+      // Always use manual verification approach
+      res.status(201).json({
+        message: 'Registration successful! Please use the verification link below to confirm your account.',
+        user: newUser,
+        emailVerificationSent: false,
+        requiresVerification: true,
+        manualVerification: true,
+        verificationToken: verificationToken,
+        verificationUrl: emailResult.manualUrl,
+        verificationMessage: emailResult.message
+      });
+    }
 
   } catch (error) {
     console.error('Registration error:', error);
@@ -147,6 +188,233 @@ router.post('/register', [
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+// Email verification route
+router.get('/verify-email', async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Verification token is required' });
+    }
+
+    // Find user with this verification token
+    const user = await get(
+      'SELECT id, email, name, email_verification_expires FROM users WHERE email_verification_token = ?',
+      [token]
+    );
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid verification token' });
+    }
+
+    // Check if token has expired
+    if (new Date() > new Date(user.email_verification_expires)) {
+      return res.status(400).json({ error: 'Verification token has expired' });
+    }
+
+    // Mark email as verified and clear token
+    await run(
+      'UPDATE users SET email_verified = 1, email_verification_token = NULL, email_verification_expires = NULL WHERE id = ?',
+      [user.id]
+    );
+
+    res.json({
+      message: 'Email verified successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
+
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Resend verification email
+router.post('/resend-verification', [
+  body('email').isEmail().normalizeEmail()
+], validateRequest, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Find user
+    const user = await get(
+      'SELECT id, email, name, email_verified, email_verification_token FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.email_verified) {
+      return res.status(400).json({ error: 'Email is already verified' });
+    }
+
+    // Generate new verification token
+    const verificationToken = generateVerificationToken();
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Update user with new token
+    await run(
+      'UPDATE users SET email_verification_token = ?, email_verification_expires = ? WHERE id = ?',
+      [verificationToken, verificationExpires, user.id]
+    );
+
+    // Send verification email
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const emailResult = await sendVerificationEmail(email, user.name, verificationToken, baseUrl);
+
+    // Always use manual verification approach
+    res.json({
+      message: 'Please use the verification link below to confirm your account.',
+      emailSent: false,
+      manualVerification: true,
+      verificationToken: verificationToken,
+      verificationUrl: emailResult.manualUrl,
+      verificationMessage: emailResult.message
+    });
+
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get manual verification token for a user (for development/testing)
+router.get('/manual-verification/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // Find user
+    const user = await get(
+      'SELECT id, email, name, email_verified, email_verification_token, email_verification_expires FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.email_verified) {
+      return res.status(400).json({ error: 'Email is already verified' });
+    }
+
+    if (!user.email_verification_token) {
+      return res.status(400).json({ error: 'No verification token found. Please try registering again.' });
+    }
+
+    // Check if token has expired
+    if (new Date() > new Date(user.email_verification_expires)) {
+      return res.status(400).json({ error: 'Verification token has expired. Please try resending verification email.' });
+    }
+
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const verificationUrl = `${baseUrl}/verify-email?token=${user.email_verification_token}`;
+
+    res.json({
+      message: 'Manual verification token retrieved successfully',
+      email: user.email,
+      name: user.name,
+      verificationToken: user.email_verification_token,
+      verificationUrl: verificationUrl,
+      expiresAt: user.email_verification_expires
+    });
+
+  } catch (error) {
+    console.error('Manual verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Forgot password route
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail()
+], validateRequest, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Find user
+    const user = await get(
+      'SELECT id, email, name FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (!user) {
+      // Don't reveal if user exists or not
+      return res.json({ message: 'If an account with that email exists, a password reset link has been sent' });
+    }
+
+    // Generate password reset token
+    const resetToken = generatePasswordResetToken();
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Update user with reset token
+    await run(
+      'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
+      [resetToken, resetExpires, user.id]
+    );
+
+    // Send password reset email
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const emailSent = await sendPasswordResetEmail(email, user.name, resetToken, baseUrl);
+
+    res.json({
+      message: emailSent ? 'Password reset email sent successfully' : 'Failed to send password reset email',
+      emailSent
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Reset password route
+router.post('/reset-password', [
+  body('token').notEmpty(),
+  body('password').isLength({ min: 6 })
+], validateRequest, async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    // Find user with this reset token
+    const user = await get(
+      'SELECT id, email, password_reset_expires FROM users WHERE password_reset_token = ?',
+      [token]
+    );
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid reset token' });
+    }
+
+    // Check if token has expired
+    if (new Date() > new Date(user.password_reset_expires)) {
+      return res.status(400).json({ error: 'Reset token has expired' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update password and clear reset token
+    await run(
+      'UPDATE users SET password = ?, password_reset_token = NULL, password_reset_expires = NULL WHERE id = ?',
+      [hashedPassword, user.id]
+    );
+
+    res.json({
+      message: 'Password reset successfully'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -161,7 +429,7 @@ router.get('/profile', async (req, res) => {
 
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await get(
-      'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at FROM users WHERE id = ?',
+      'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, email_verified, created_at FROM users WHERE id = ?',
       [decoded.userId]
     );
 

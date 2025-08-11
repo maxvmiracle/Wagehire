@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import api from '../services/api';
 import {
   ArrowLeft,
   Calendar,
@@ -35,7 +35,7 @@ const InterviewDetail = () => {
   const fetchInterviewDetail = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/interviews/${id}`);
+      const response = await api.get(`/interviews/${id}`);
       setInterview(response.data.interview);
     } catch (error) {
       console.error('Error fetching interview details:', error);
@@ -56,7 +56,7 @@ const InterviewDetail = () => {
     }
 
     try {
-      await axios.delete(`/api/interviews/${id}`);
+      await api.delete(`/interviews/${id}`);
       toast.success('Interview deleted successfully');
       navigate('/interviews');
     } catch (error) {

@@ -9,7 +9,10 @@ const router = express.Router();
 const validateRequest = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ 
+      error: errors.array()[0].msg,
+      errors: errors.array() 
+    });
   }
   next();
 };
@@ -229,15 +232,35 @@ router.get('/me/dashboard', authenticateToken, async (req, res) => {
 // Update user profile (own profile only)
 router.put('/me', [
   authenticateToken,
-  body('name').optional().trim().isLength({ min: 2 }),
+  body('name').optional().trim().isLength({ min: 1 }).withMessage('Name must be at least 1 character long'),
   body('email').optional().isEmail().normalizeEmail(),
-  body('phone').optional().trim(),
-  body('resume_url').optional().isURL(),
+  body('phone').optional().trim().isLength({ min: 0 }),
+  body('resume_url').optional().trim().custom((value) => {
+    if (value && value.trim() !== '') {
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        throw new Error('Resume URL must be a valid URL');
+      }
+    }
+    return true;
+  }),
   body('current_position').optional().trim(),
-  body('experience_years').optional().isInt({ min: 0, max: 50 }),
+  body('experience_years').optional().custom((value) => {
+    if (value !== undefined && value !== null && value !== '') {
+      const num = parseInt(value);
+      if (isNaN(num) || num < 0 || num > 50) {
+        throw new Error('Experience years must be a number between 0 and 50');
+      }
+      return num;
+    }
+    return value;
+  }),
   body('skills').optional().trim()
 ], validateRequest, async (req, res) => {
   try {
+    console.log('Profile update request body:', req.body);
     const { name, email, phone, resume_url, current_position, experience_years, skills } = req.body;
     const updateFields = {};
     
@@ -248,6 +271,8 @@ router.put('/me', [
     if (current_position) updateFields.current_position = current_position;
     if (experience_years !== undefined) updateFields.experience_years = experience_years;
     if (skills) updateFields.skills = skills;
+    
+    console.log('Update fields:', updateFields);
     
     if (Object.keys(updateFields).length === 0) {
       return res.status(400).json({ error: 'No fields to update' });

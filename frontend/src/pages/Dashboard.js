@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 import {
   Calendar,
   Users,
@@ -38,14 +38,14 @@ const Dashboard = () => {
         if (isAdmin()) {
           // Admin dashboard - get system-wide stats
           [statsResponse, interviewsResponse] = await Promise.all([
-            axios.get('/api/admin/dashboard'),
-            axios.get('/api/admin/interviews?limit=5')
+            api.get('/admin/dashboard'),
+            api.get('/admin/interviews?limit=5')
           ]);
         } else {
           // Candidate dashboard - get personal stats
           [statsResponse, interviewsResponse] = await Promise.all([
-            axios.get('/api/users/me/dashboard'),
-            axios.get('/api/interviews?limit=5')
+            api.get('/users/me/dashboard'),
+            api.get('/interviews?limit=5')
           ]);
         }
 

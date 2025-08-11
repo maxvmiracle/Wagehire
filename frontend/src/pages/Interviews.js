@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import api from '../services/api';
 import {
   Plus,
   Calendar,
@@ -39,10 +39,13 @@ const Interviews = () => {
   const fetchInterviews = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/interviews');
+      console.log('Fetching interviews...');
+      const response = await api.get('/interviews');
+      console.log('Interviews response:', response.data);
       setInterviews(response.data.interviews);
     } catch (error) {
       console.error('Error fetching interviews:', error);
+      console.error('Error response:', error.response);
       toast.error('Failed to load interviews');
     } finally {
       setLoading(false);
@@ -55,7 +58,7 @@ const Interviews = () => {
     }
 
     try {
-      await axios.delete(`/api/interviews/${id}`);
+      await api.delete(`/interviews/${id}`);
       toast.success('Interview deleted successfully');
       fetchInterviews();
     } catch (error) {

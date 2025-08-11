@@ -18,6 +18,9 @@ app.use(express.urlencoded({ extended: true }));
 // Database initialization
 const initDatabase = require('./database/init');
 
+// Email service initialization
+const { verifyEmailConfig } = require('./services/emailService');
+
 // Routes
 const { router: authRoutes } = require('./routes/auth');
 const interviewRoutes = require('./routes/interviews');
@@ -61,9 +64,18 @@ async function startServer() {
     await initDatabase();
     console.log('Database initialized successfully');
     
-    app.listen(PORT, () => {
+    // Verify email configuration
+    const emailConfigValid = await verifyEmailConfig();
+    if (emailConfigValid) {
+      console.log('Email service configured successfully');
+    } else {
+      console.warn('Email service configuration failed. Email features may not work properly.');
+    }
+    
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`API available at http://localhost:${PORT}/api`);
+      console.log(`API available at http://0.0.0.0:${PORT}/api (external access)`);
       console.log(`Health check: http://localhost:${PORT}/api/health`);
     });
   } catch (error) {

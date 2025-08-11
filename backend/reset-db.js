@@ -4,14 +4,12 @@ const initDatabase = require('./database/init');
 
 async function resetDatabase() {
   try {
-    // Delete the existing database file
-    const dbPath = path.join(__dirname, 'database', 'wagehire.db');
-    if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
-      console.log('Deleted existing database file');
-    }
-
-    // Initialize the database with new schema
+    console.log('Setting up fresh database...');
+    
+    // Set environment variable to force database reset
+    process.env.RESET_DB = 'true';
+    
+    // Initialize the database with new schema (this will drop and recreate tables)
     await initDatabase();
     console.log('Database reset completed successfully');
   } catch (error) {

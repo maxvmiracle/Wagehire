@@ -17,8 +17,18 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const result = await login(email, password);
+      if (result.success) {
+        navigate('/dashboard');
+      } else if (result.emailNotVerified) {
+        // Redirect to verification page with email
+        navigate('/verify-email', { 
+          state: { 
+            email: email,
+            message: 'Please verify your email address before logging in.'
+          }
+        });
+      }
     } catch (error) {
       toast.error(error.response?.data?.error || 'Login failed');
     } finally {
@@ -108,7 +118,7 @@ const Login = () => {
             </button>
           </div>
 
-          <div className="text-center">
+          <div className="text-center space-y-2">
             <p className="text-sm text-gray-300">
               Don't have an account?{' '}
               <Link
@@ -116,6 +126,14 @@ const Login = () => {
                 className="font-medium text-primary-300 hover:text-primary-200"
               >
                 Sign up here
+              </Link>
+            </p>
+            <p className="text-sm text-gray-300">
+              <Link
+                to="/forgot-password"
+                className="font-medium text-primary-300 hover:text-primary-200"
+              >
+                Forgot your password?
               </Link>
             </p>
           </div>

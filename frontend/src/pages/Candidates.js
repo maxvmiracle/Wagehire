@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 import { 
   Plus, 
   UserCheck, 
@@ -29,7 +29,7 @@ const Candidates = () => {
 
   const fetchCandidates = async () => {
     try {
-      const response = await axios.get('/api/candidates');
+      const response = await api.get('/candidates');
       setCandidates(response.data.candidates);
     } catch (error) {
       console.error('Error fetching candidates:', error);
@@ -44,7 +44,7 @@ const Candidates = () => {
     }
 
     try {
-      await axios.delete(`/api/candidates/${candidateId}`);
+      await api.delete(`/candidates/${candidateId}`);
       setCandidates(candidates.filter(c => c.id !== candidateId));
       alert('Candidate deleted successfully');
     } catch (error) {

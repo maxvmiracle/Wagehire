@@ -61,13 +61,31 @@ const Profile = () => {
     setLoading(true);
 
     try {
-      const result = await updateProfile(formData);
+      // Clean up form data - remove empty strings and convert experience_years to number
+      const cleanedData = { ...formData };
+      
+      // Remove empty strings
+      Object.keys(cleanedData).forEach(key => {
+        if (cleanedData[key] === '') {
+          delete cleanedData[key];
+        }
+      });
+      
+      // Convert experience_years to number if it exists
+      if (cleanedData.experience_years !== undefined) {
+        cleanedData.experience_years = parseInt(cleanedData.experience_years) || 0;
+      }
+      
+      console.log('Submitting profile data:', cleanedData);
+      const result = await updateProfile(cleanedData);
+      console.log('Profile update result:', result);
       if (result.success) {
         setEditing(false);
         toast.success('Profile updated successfully!');
       }
     } catch (error) {
       console.error('Profile update error:', error);
+      console.error('Error response:', error.response);
     } finally {
       setLoading(false);
     }

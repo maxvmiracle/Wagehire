@@ -4,6 +4,9 @@ import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
 import Dashboard from './pages/Dashboard';
 import Interviews from './pages/Interviews';
 import Candidates from './pages/Candidates';
@@ -18,7 +21,9 @@ import Admin from './pages/Admin';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+
+  console.log('ProtectedRoute - isAuthenticated:', isAuthenticated, 'loading:', loading, 'user:', user);
 
   if (loading) {
     return (
@@ -29,9 +34,11 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!isAuthenticated) {
+    console.log('ProtectedRoute - redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
+  console.log('ProtectedRoute - rendering children');
   return children;
 };
 
@@ -72,6 +79,18 @@ function App() {
         <Route 
           path="/register" 
           element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />} 
+        />
+        <Route 
+          path="/forgot-password" 
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPassword />} 
+        />
+        <Route 
+          path="/reset-password" 
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <ResetPassword />} 
+        />
+        <Route 
+          path="/verify-email" 
+          element={<VerifyEmail />} 
         />
 
         {/* Protected Routes */}

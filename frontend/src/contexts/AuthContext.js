@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -17,12 +17,12 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  // Set up axios defaults
+  // Set up api defaults
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } else {
-      delete axios.defaults.headers.common['Authorization'];
+      delete api.defaults.headers.common['Authorization'];
     }
   }, [token]);
 
@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const response = await axios.get('/api/auth/profile');
+      const response = await api.get('/auth/profile');
       setUser(response.data.user);
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('/api/auth/login', {
+      const response = await api.post('/auth/login', {
         email,
         password
       });
@@ -66,6 +66,13 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.error || 'Login failed';
+      
+      // Handle email verification error
+      if (error.response?.data?.emailNotVerified) {
+        toast.error('Please verify your email address before logging in');
+        return { success: false, error: message, emailNotVerified: true };
+      }
+      
       toast.error(message);
       return { success: false, error: message };
     }
@@ -73,17 +80,30 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await axios.post('/api/auth/register', userData);
+      console.log('Registration attempt with data:', userData);
+      const response = await api.post('/auth/register', userData);
+      console.log('Registration response:', response.data);
       
-      const { token: newToken, user: userInfo } = response.data;
+      const { user: userInfo, emailVerificationSent, requiresVerification } = response.data;
       
-      localStorage.setItem('token', newToken);
-      setToken(newToken);
-      setUser(userInfo);
+      console.log('Registration successful, requires verification:', requiresVerification);
       
+      if (requiresVerification) {
+        toast.success('Registration successful! Please check your email to verify your account.');
+        return { 
+          success: true, 
+          requiresVerification: true,
+          emailVerificationSent,
+          user: userInfo
+        };
+      }
+      
+      // This should not happen with the new flow, but keeping for safety
       toast.success('Registration successful! Welcome to Wagehire!');
       return { success: true };
     } catch (error) {
+      console.error('Registration error:', error);
+      console.error('Error response:', error.response);
       const message = error.response?.data?.error || 'Registration failed';
       toast.error(message);
       return { success: false, error: message };
@@ -99,11 +119,15 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
-      const response = await axios.put('/api/users/me', profileData);
+      console.log('AuthContext: Updating profile with data:', profileData);
+      const response = await api.put('/users/me', profileData);
+      console.log('AuthContext: Profile update response:', response.data);
       setUser(response.data.user);
       toast.success('Profile updated successfully!');
       return { success: true };
     } catch (error) {
+      console.error('AuthContext: Profile update error:', error);
+      console.error('AuthContext: Error response:', error.response);
       const message = error.response?.data?.error || 'Profile update failed';
       toast.error(message);
       return { success: false, error: message };
