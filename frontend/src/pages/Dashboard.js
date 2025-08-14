@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import LoadingScreen from '../components/LoadingScreen';
 import {
   Calendar,
   Users,
@@ -126,11 +127,7 @@ const Dashboard = () => {
   const isProfileComplete = profileCompletion === 100;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
-      </div>
-    );
+    return <LoadingScreen message="Loading dashboard..." />;
   }
 
   return (

@@ -16,16 +16,18 @@ const emailConfig = {
 const isEmailConfigured = () => {
   const hasUser = process.env.EMAIL_USER && 
                   process.env.EMAIL_USER !== 'your-email@gmail.com' && 
-                  process.env.EMAIL_USER !== '';
+                  process.env.EMAIL_USER !== '' &&
+                  process.env.EMAIL_USER !== 'manual-verification-only';
   const hasPass = process.env.EMAIL_PASS && 
                   process.env.EMAIL_PASS !== 'your-app-password' && 
-                  process.env.EMAIL_PASS !== '';
+                  process.env.EMAIL_PASS !== '' &&
+                  process.env.EMAIL_PASS !== 'manual-verification-only';
   
   if (!hasUser) {
-    console.log('⚠️  EMAIL_USER not configured or using default value');
+    console.log('⚠️  EMAIL_USER not configured or using manual verification mode');
   }
   if (!hasPass) {
-    console.log('⚠️  EMAIL_PASS not configured or using default value');
+    console.log('⚠️  EMAIL_PASS not configured or using manual verification mode');
   }
   
   return hasUser && hasPass;
@@ -45,8 +47,9 @@ if (isEmailConfigured()) {
     console.error('❌ Failed to create email transporter:', error);
   }
 } else {
-  console.log('⚠️  Email transporter not created - email not configured');
-  console.log('📋 To configure email:');
+  console.log('📧 Manual verification mode enabled - no email sending');
+  console.log('🔗 Verification links will be displayed directly to users');
+  console.log('📋 To enable email sending:');
   console.log('   1. Run: npm run quick-email-setup');
   console.log('   2. Or set EMAIL_USER and EMAIL_PASS in .env file');
 }
@@ -63,19 +66,21 @@ const generatePasswordResetToken = () => {
 
 // Send verification email
 const sendVerificationEmail = async (email, name, token, baseUrl) => {
-  // Since we don't want to use email sending, always return manual verification
   const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
   
-  console.log('📧 Email verification system configured for manual verification only');
-  console.log(`📧 Verification URL for ${email}: ${verificationUrl}`);
-  console.log('📋 User should click the verification link to confirm their account');
-  
-  return {
-    success: false,
-    reason: 'manual_verification_only',
-    manualUrl: verificationUrl,
-    message: 'Please use the verification link below to confirm your account'
-  };
+  // Check if email is configured
+  if (!isEmailConfigured() || !transporter) {
+    console.log('📧 Email not configured. Using manual verification.');
+    console.log(`📧 Verification URL for ${email}: ${verificationUrl}`);
+    console.log('📋 User should click the verification link to confirm their account');
+    
+    return {
+      success: false,
+      reason: 'email_not_configured',
+      manualUrl: verificationUrl,
+      message: 'Please use the verification link below to confirm your account'
+    };
+  }
   
   const mailOptions = {
     from: `"Wagehire" <${emailConfig.auth.user}>`,
@@ -254,8 +259,9 @@ const verifyEmailConfig = async () => {
   console.log('🔍 Verifying email configuration...');
   
   if (!isEmailConfigured()) {
-    console.log('❌ Email not configured. Set EMAIL_USER and EMAIL_PASS environment variables to enable email features.');
-    console.log('📝 Copy env.example to .env and update with your email credentials');
+    console.log('📧 Manual verification mode enabled - no email sending required');
+    console.log('🔗 Verification links will be displayed directly to users');
+    console.log('📋 To enable email sending, set EMAIL_USER and EMAIL_PASS in .env file');
     return false;
   }
 

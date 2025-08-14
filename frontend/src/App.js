@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
+import LoadingScreen from './components/LoadingScreen';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -26,11 +27,7 @@ const ProtectedRoute = ({ children }) => {
   console.log('ProtectedRoute - isAuthenticated:', isAuthenticated, 'loading:', loading, 'user:', user);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
+    return <LoadingScreen message="Authenticating..." />;
   }
 
   if (!isAuthenticated) {
@@ -47,11 +44,7 @@ const AdminRoute = ({ children }) => {
   const { isAuthenticated, loading, isAdmin } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
+    return <LoadingScreen message="Loading admin panel..." />;
   }
 
   if (!isAuthenticated) {

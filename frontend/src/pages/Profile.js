@@ -405,11 +405,16 @@ const Profile = () => {
                   className="bg-primary-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors duration-300 flex items-center disabled:opacity-50"
                 >
                   {loading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Saving...</span>
+                    </div>
                   ) : (
-                    <Save className="w-4 h-4 mr-2" />
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Changes
+                    </>
                   )}
-                  Save Changes
                 </button>
               </div>
             )}

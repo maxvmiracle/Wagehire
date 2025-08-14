@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import LoadingScreen from '../components/LoadingScreen';
+import { Users } from 'lucide-react';
 import { 
   Plus, 
   UserCheck, 
@@ -76,11 +78,7 @@ const Candidates = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
+    return <LoadingScreen message="Loading candidates..." icon={Users} />;
   }
 
   return (

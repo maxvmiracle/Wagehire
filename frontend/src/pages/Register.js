@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { UserCheck, Eye, EyeOff, Phone, Briefcase, Calendar, MapPin, FileText, Briefcase as BriefcaseIcon } from 'lucide-react';
+import { UserCheck, Eye, EyeOff, Phone, Briefcase, Calendar, MapPin, FileText, Briefcase as BriefcaseIcon, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const Register = () => {
@@ -21,6 +21,52 @@ const Register = () => {
     confirmPassword: ''
   });
   const [errors, setErrors] = useState({});
+  const [passwordStrength, setPasswordStrength] = useState({
+    score: 0,
+    requirements: {
+      length: false,
+      uppercase: false,
+      lowercase: false,
+      number: false,
+      special: false
+    }
+  });
+
+  // Password strength validation function
+  const validatePasswordStrength = (password) => {
+    const requirements = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /\d/.test(password),
+      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+    };
+
+    const score = Object.values(requirements).filter(Boolean).length;
+    
+    return {
+      score,
+      requirements
+    };
+  };
+
+  // Update password strength when password changes
+  useEffect(() => {
+    if (formData.password) {
+      setPasswordStrength(validatePasswordStrength(formData.password));
+    } else {
+      setPasswordStrength({
+        score: 0,
+        requirements: {
+          length: false,
+          uppercase: false,
+          lowercase: false,
+          number: false,
+          special: false
+        }
+      });
+    }
+  }, [formData.password]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -53,8 +99,8 @@ const Register = () => {
     
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (passwordStrength.score < 5) {
+      newErrors.password = 'Password does not meet security requirements';
     }
     
     if (!formData.confirmPassword) {
@@ -140,7 +186,14 @@ const Register = () => {
       }
     } catch (error) {
       console.error('Registration error in component:', error);
-      toast.error(error.response?.data?.error || 'Registration failed');
+      
+      // Handle password validation errors from backend
+      if (error.response?.data?.passwordErrors) {
+        const passwordErrors = error.response.data.passwordErrors;
+        passwordErrors.forEach(err => toast.error(err));
+      } else {
+        toast.error(error.response?.data?.error || 'Registration failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -318,6 +371,91 @@ const Register = () => {
               {errors.password && (
                 <p className="mt-1 text-sm text-red-300">{errors.password}</p>
               )}
+              
+              {/* Password Strength Indicator */}
+              {formData.password && (
+                <div className="mt-2">
+                  <div className="mb-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-300">Password Strength:</span>
+                      <span className={`font-medium ${
+                        passwordStrength.score === 5 ? 'text-green-400' :
+                        passwordStrength.score >= 3 ? 'text-yellow-400' :
+                        'text-red-400'
+                      }`}>
+                        {passwordStrength.score === 5 ? 'Strong' :
+                         passwordStrength.score >= 3 ? 'Medium' :
+                         'Weak'}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2 mt-1">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          passwordStrength.score === 5 ? 'bg-green-500' :
+                          passwordStrength.score >= 3 ? 'bg-yellow-500' :
+                          'bg-red-500'
+                        }`}
+                        style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  {/* Password Requirements */}
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-300 font-medium mb-2">Requirements:</p>
+                    <div className="flex items-center text-xs">
+                      {passwordStrength.requirements.length ? (
+                        <CheckCircle className="h-3 w-3 text-green-400 mr-2" />
+                      ) : (
+                        <XCircle className="h-3 w-3 text-red-400 mr-2" />
+                      )}
+                      <span className={passwordStrength.requirements.length ? 'text-green-400' : 'text-red-400'}>
+                        At least 8 characters
+                      </span>
+                    </div>
+                    <div className="flex items-center text-xs">
+                      {passwordStrength.requirements.uppercase ? (
+                        <CheckCircle className="h-3 w-3 text-green-400 mr-2" />
+                      ) : (
+                        <XCircle className="h-3 w-3 text-red-400 mr-2" />
+                      )}
+                      <span className={passwordStrength.requirements.uppercase ? 'text-green-400' : 'text-red-400'}>
+                        One uppercase letter (A-Z)
+                      </span>
+                    </div>
+                    <div className="flex items-center text-xs">
+                      {passwordStrength.requirements.lowercase ? (
+                        <CheckCircle className="h-3 w-3 text-green-400 mr-2" />
+                      ) : (
+                        <XCircle className="h-3 w-3 text-red-400 mr-2" />
+                      )}
+                      <span className={passwordStrength.requirements.lowercase ? 'text-green-400' : 'text-red-400'}>
+                        One lowercase letter (a-z)
+                      </span>
+                    </div>
+                    <div className="flex items-center text-xs">
+                      {passwordStrength.requirements.number ? (
+                        <CheckCircle className="h-3 w-3 text-green-400 mr-2" />
+                      ) : (
+                        <XCircle className="h-3 w-3 text-red-400 mr-2" />
+                      )}
+                      <span className={passwordStrength.requirements.number ? 'text-green-400' : 'text-red-400'}>
+                        One number (0-9)
+                      </span>
+                    </div>
+                    <div className="flex items-center text-xs">
+                      {passwordStrength.requirements.special ? (
+                        <CheckCircle className="h-3 w-3 text-green-400 mr-2" />
+                      ) : (
+                        <XCircle className="h-3 w-3 text-red-400 mr-2" />
+                      )}
+                      <span className={passwordStrength.requirements.special ? 'text-green-400' : 'text-red-400'}>
+                        One special character (!@#$%^&*()_+-=[]{}|;:,.)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -361,7 +499,10 @@ const Register = () => {
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Creating account...</span>
+                </div>
               ) : (
                 'Create Account'
               )}

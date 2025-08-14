@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import LoadingScreen from '../components/LoadingScreen';
 import { 
   Users as UsersIcon, 
   Shield, 
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const Users = () => {
+const UsersPage = () => {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -105,11 +106,7 @@ const Users = () => {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
+    return <LoadingScreen message="Loading users..." icon={UsersIcon} />;
   }
 
   return (
@@ -244,4 +241,4 @@ const Users = () => {
   );
 };
 
-export default Users; 
+export default UsersPage; 

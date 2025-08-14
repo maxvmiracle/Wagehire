@@ -10,6 +10,36 @@ const {
   generatePasswordResetToken 
 } = require('../services/emailService');
 
+// Strong password validation function
+const validateStrongPassword = (password) => {
+  const errors = [];
+  
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  
+  if (!/\d/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors: errors
+  };
+};
+
 const router = express.Router();
 
 // JWT Secret (in production, use environment variable)
@@ -51,13 +81,13 @@ router.post('/login', [
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check if email is verified (except for admin users)
-    if (user.role !== 'admin' && !user.email_verified) {
-      return res.status(401).json({ 
-        error: 'Please verify your email address before logging in',
-        emailNotVerified: true 
-      });
-    }
+    // Email verification is disabled - all users can login immediately
+    // if (user.role !== 'admin' && !user.email_verified) {
+    //   return res.status(401).json({ 
+    //     error: 'Please verify your email address before logging in',
+    //     emailNotVerified: true 
+    //   });
+    // }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -88,7 +118,7 @@ router.post('/login', [
 // Register route for candidates
 router.post('/register', [
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
   body('name').trim().isLength({ min: 2 }),
   body('phone').optional().trim(),
   body('resume_url').optional().isURL(),
@@ -118,6 +148,22 @@ router.post('/register', [
       return res.status(400).json({ error: 'User already exists' });
     }
 
+    // Validate strong password
+    const passwordValidation = validateStrongPassword(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        error: 'Password does not meet security requirements',
+        passwordErrors: passwordValidation.errors,
+        passwordRequirements: [
+          'At least 8 characters long',
+          'At least one uppercase letter (A-Z)',
+          'At least one lowercase letter (a-z)',
+          'At least one number (0-9)',
+          'At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'
+        ]
+      });
+    }
+
     // Check if this is the first user
     const userCount = await get('SELECT COUNT(*) as count FROM users');
     const isFirstUser = userCount.count === 0;
@@ -128,58 +174,25 @@ router.post('/register', [
     // If this is the first user, make them an admin, otherwise make them a candidate
     const userRole = isFirstUser ? 'admin' : 'candidate';
 
-    if (isFirstUser) {
-      // First user (admin) - no email verification required
-      const result = await run(
-        'INSERT INTO users (email, password, name, role, phone, resume_url, current_position, experience_years, skills, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
-        [email, hashedPassword, name, userRole, phone, resume_url, current_position, experience_years, skills]
-      );
+    // All users are automatically verified - no email verification required
+    const result = await run(
+      'INSERT INTO users (email, password, name, role, phone, resume_url, current_position, experience_years, skills, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+      [email, hashedPassword, name, userRole, phone, resume_url, current_position, experience_years, skills]
+    );
 
-      // Get the created admin user
-      const newUser = await get(
-        'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, email_verified, created_at FROM users WHERE id = ?',
-        [result.id]
-      );
+    // Get the created user
+    const newUser = await get(
+      'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, email_verified, created_at FROM users WHERE id = ?',
+      [result.id]
+    );
 
-      res.status(201).json({
-        message: 'Admin account created successfully! You can now login.',
-        user: newUser,
-        emailVerificationSent: false,
-        requiresVerification: false,
-        isAdmin: true
-      });
-    } else {
-      // Subsequent users (candidates) - require email verification
-      const verificationToken = generateVerificationToken();
-      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-      const result = await run(
-        'INSERT INTO users (email, password, name, role, phone, resume_url, current_position, experience_years, skills, email_verification_token, email_verification_expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [email, hashedPassword, name, userRole, phone, resume_url, current_position, experience_years, skills, verificationToken, verificationExpires]
-      );
-
-      // Get the created user
-      const newUser = await get(
-        'SELECT id, email, name, role, phone, resume_url, current_position, experience_years, skills, email_verified, created_at FROM users WHERE id = ?',
-        [result.id]
-      );
-
-      // Send verification email
-      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const emailResult = await sendVerificationEmail(email, name, verificationToken, baseUrl);
-
-      // Always use manual verification approach
-      res.status(201).json({
-        message: 'Registration successful! Please use the verification link below to confirm your account.',
-        user: newUser,
-        emailVerificationSent: false,
-        requiresVerification: true,
-        manualVerification: true,
-        verificationToken: verificationToken,
-        verificationUrl: emailResult.manualUrl,
-        verificationMessage: emailResult.message
-      });
-    }
+    res.status(201).json({
+      message: isFirstUser ? 'Admin account created successfully! You can now login.' : 'Registration successful! You can now login.',
+      user: newUser,
+      emailVerificationSent: false,
+      requiresVerification: false,
+      isAdmin: isFirstUser
+    });
 
   } catch (error) {
     console.error('Registration error:', error);
@@ -271,15 +284,23 @@ router.post('/resend-verification', [
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const emailResult = await sendVerificationEmail(email, user.name, verificationToken, baseUrl);
 
-    // Always use manual verification approach
-    res.json({
-      message: 'Please use the verification link below to confirm your account.',
-      emailSent: false,
-      manualVerification: true,
-      verificationToken: verificationToken,
-      verificationUrl: emailResult.manualUrl,
-      verificationMessage: emailResult.message
-    });
+    // Handle response based on email configuration
+    if (emailResult.success) {
+      res.json({
+        message: 'Verification email sent successfully! Please check your email.',
+        emailSent: true,
+        manualVerification: false
+      });
+    } else {
+      res.json({
+        message: 'Please use the verification link below to confirm your account.',
+        emailSent: false,
+        manualVerification: true,
+        verificationToken: verificationToken,
+        verificationUrl: emailResult.manualUrl,
+        verificationMessage: emailResult.message
+      });
+    }
 
   } catch (error) {
     console.error('Resend verification error:', error);
@@ -379,10 +400,26 @@ router.post('/forgot-password', [
 // Reset password route
 router.post('/reset-password', [
   body('token').notEmpty(),
-  body('password').isLength({ min: 6 })
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
 ], validateRequest, async (req, res) => {
   try {
     const { token, password } = req.body;
+
+    // Validate strong password
+    const passwordValidation = validateStrongPassword(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ 
+        error: 'Password does not meet security requirements',
+        passwordErrors: passwordValidation.errors,
+        passwordRequirements: [
+          'At least 8 characters long',
+          'At least one uppercase letter (A-Z)',
+          'At least one lowercase letter (a-z)',
+          'At least one number (0-9)',
+          'At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'
+        ]
+      });
+    }
 
     // Find user with this reset token
     const user = await get(
