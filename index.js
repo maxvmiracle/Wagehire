@@ -11,9 +11,6 @@ process.chdir(path.join(__dirname, 'backend'));
 console.log('🚀 Starting Wagehire Backend Server...');
 console.log(`📁 Working directory: ${process.cwd()}`);
 
-// Load environment variables
-require('dotenv').config();
-
 // Import and start the server
 try {
   require('./server.js');
