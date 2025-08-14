@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import LoadingScreen from './LoadingScreen';
 import {
   UserCheck,
   LogOut,
@@ -20,10 +19,11 @@ import {
 } from 'lucide-react';
 
 const Layout = () => {
-  const { user, logout, isAdmin, isAuthenticated, loading } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [profileCompletion, setProfileCompletion] = useState(0);
 
   // Calculate profile completion
@@ -63,16 +63,6 @@ const Layout = () => {
       setProfileCompletion(Math.round((completedFields / totalFields) * 100));
     }
   }, [user, isAdmin]);
-
-  // Show loading screen while checking authentication
-  if (loading) {
-    return <LoadingScreen message="Authenticating..." />;
-  }
-
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   // Navigation items based on user role
   const getNavigationItems = () => {
