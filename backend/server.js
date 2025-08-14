@@ -50,6 +50,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Database initialization
 const initDatabase = require('./database/init');
+const migrateDatabase = require('./migrate-database');
 
 // Email service initialization
 const { verifyEmailConfig } = require('./services/emailService');
@@ -96,6 +97,10 @@ async function startServer() {
     
     await initDatabase();
     console.log('Database initialized successfully');
+    
+    // Run database migration to ensure all required columns exist
+    await migrateDatabase();
+    console.log('Database migration completed');
     
     // Verify email configuration
     const emailConfigValid = await verifyEmailConfig();

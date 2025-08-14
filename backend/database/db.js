@@ -41,9 +41,11 @@ const initializeTables = () => {
           current_position TEXT,
           experience_years INTEGER,
           skills TEXT,
-          email_verified INTEGER DEFAULT 0,
+          email_verified BOOLEAN DEFAULT 0,
           email_verification_token TEXT,
           email_verification_expires DATETIME,
+          password_reset_token TEXT,
+          password_reset_expires DATETIME,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -67,6 +69,7 @@ const initializeTables = () => {
           duration INTEGER DEFAULT 60,
           status TEXT DEFAULT 'scheduled',
           round INTEGER DEFAULT 1,
+          interview_type TEXT DEFAULT 'technical',
           location TEXT,
           notes TEXT,
           company_website TEXT,
@@ -77,6 +80,7 @@ const initializeTables = () => {
           interviewer_name TEXT,
           interviewer_email TEXT,
           interviewer_position TEXT,
+          interviewer_linkedin_url TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (candidate_id) REFERENCES users (id)

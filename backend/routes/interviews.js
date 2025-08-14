@@ -211,20 +211,39 @@ router.post('/', [
     console.log('All validations passed, creating interview...');
     
     // Create interview for the current candidate
-    const result = await run(`
-      INSERT INTO interviews (
-        candidate_id, company_name, job_title, scheduled_date, duration, 
-        round, interview_type, location, notes, status,
+    let result;
+    // First, check if the required columns exist
+    try {
+      result = await run(`
+        INSERT INTO interviews (
+          candidate_id, company_name, job_title, scheduled_date, duration, 
+          round, interview_type, location, notes, status,
+          company_website, company_linkedin_url, other_urls, job_description, salary_range,
+          interviewer_name, interviewer_email, interviewer_position, interviewer_linkedin_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )
+      `, [
+        req.user.userId, company_name, job_title, scheduled_date, duration, roundNumber, interview_type, location, notes, status,
         company_website, company_linkedin_url, other_urls, job_description, salary_range,
         interviewer_name, interviewer_email, interviewer_position, interviewer_linkedin_url
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?, ?, ?
-      )
-    `, [
-      req.user.userId, company_name, job_title, scheduled_date, duration, roundNumber, interview_type, location, notes, status,
-      company_website, company_linkedin_url, other_urls, job_description, salary_range,
-      interviewer_name, interviewer_email, interviewer_position, interviewer_linkedin_url
-    ]);
+      ]);
+    } catch (columnError) {
+      // If columns are missing, try with basic columns only
+      console.log('Full schema insert failed, trying basic schema...');
+      result = await run(`
+        INSERT INTO interviews (
+          candidate_id, company_name, job_title, scheduled_date, duration, 
+          round, location, notes, status,
+          company_website, company_linkedin_url, other_urls, job_description, salary_range,
+          interviewer_name, interviewer_email, interviewer_position
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        req.user.userId, company_name, job_title, scheduled_date, duration, roundNumber, location, notes, status,
+        company_website, company_linkedin_url, other_urls, job_description, salary_range,
+        interviewer_name, interviewer_email, interviewer_position
+      ]);
+    }
     
     // Get the created interview
     const newInterview = await get(`
@@ -244,7 +263,21 @@ router.post('/', [
     
   } catch (error) {
     console.error('Create interview error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    // Provide more specific error messages
+    if (error.message && error.message.includes('no such column')) {
+      res.status(500).json({ 
+        error: 'Database schema error. Please contact administrator.',
+        details: error.message 
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while creating the interview'
+      });
+    }
   }
 });
 
