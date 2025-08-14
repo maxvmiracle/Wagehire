@@ -1,11 +1,12 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Use the same database path logic as connection.js
+// Use persistent database storage
 const getDbPath = () => {
   if (process.env.NODE_ENV === 'production') {
-    // Use in-memory database for Vercel
-    return ':memory:';
+    // Use persistent storage on Render
+    // Render provides /opt/render/project/src as a persistent directory
+    return '/opt/render/project/src/backend/database/wagehire.db';
   }
   // Use file-based database for development
   return path.join(__dirname, 'wagehire.db');

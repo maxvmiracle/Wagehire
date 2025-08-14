@@ -11,4 +11,9 @@ services:
       - key: PORT
         value: 10000
     healthCheckPath: /api/health
-    autoDeploy: true 
+    autoDeploy: true
+    # Enable persistent disk for database storage
+    disk:
+      name: wagehire-db
+      mountPath: /opt/render/project/src
+      sizeGB: 1 

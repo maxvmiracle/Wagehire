@@ -51,6 +51,7 @@ app.use(express.urlencoded({ extended: true }));
 // Database initialization
 const initDatabase = require('./database/init');
 const migrateDatabase = require('./migrate-database');
+const { initializeDatabaseWithBackup } = require('./database/backup');
 
 // Email service initialization
 const { verifyEmailConfig } = require('./services/emailService');
@@ -94,6 +95,10 @@ async function startServer() {
     // For production (Vercel), we don't need to connect to a persistent database
     // The in-memory database will be created by initDatabase
     console.log('Database initialization started');
+    
+    // Initialize database with backup/restore functionality
+    await initializeDatabaseWithBackup();
+    console.log('Database backup/restore initialization completed');
     
     await initDatabase();
     console.log('Database initialized successfully');
