@@ -17,31 +17,44 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
+  // Debug logging
+  console.log('AuthContext - Initial token:', token);
+  console.log('AuthContext - Environment:', process.env.NODE_ENV);
+  console.log('AuthContext - API URL:', process.env.REACT_APP_API_URL);
+
   // Set up api defaults
   useEffect(() => {
     if (token) {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.log('AuthContext - Set Authorization header');
     } else {
       delete api.defaults.headers.common['Authorization'];
+      console.log('AuthContext - Removed Authorization header');
     }
   }, [token]);
 
   const checkAuth = useCallback(async () => {
+    console.log('AuthContext - Checking auth, token:', !!token);
+    
     if (!token) {
+      console.log('AuthContext - No token, setting loading to false');
       setLoading(false);
       return;
     }
 
     try {
+      console.log('AuthContext - Making profile request...');
       const response = await api.get('/auth/profile');
+      console.log('AuthContext - Profile response:', response.data);
       setUser(response.data.user);
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('AuthContext - Auth check failed:', error);
       localStorage.removeItem('token');
       setToken(null);
       setUser(null);
     } finally {
       setLoading(false);
+      console.log('AuthContext - Auth check complete, loading set to false');
     }
   }, [token]);
 

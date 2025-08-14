@@ -12,11 +12,21 @@
   body {
     @apply text-gray-900;
     overflow-x: hidden;
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><defs><linearGradient id="a" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%233b82f6;stop-opacity:1" /><stop offset="50%" style="stop-color:%231e40af;stop-opacity:1" /><stop offset="100%" style="stop-color:%231e3a8a;stop-opacity:1" /></linearGradient></defs><rect width="100%" height="100%" fill="url(%23a)"/><circle cx="200" cy="200" r="100" fill="rgba(255,255,255,0.1)"/><circle cx="1000" cy="600" r="150" fill="rgba(255,255,255,0.05)"/><circle cx="800" cy="150" r="80" fill="rgba(255,255,255,0.08)"/></svg>');
+    /* Fallback background color */
+    background-color: #1e3a8a;
+    /* Background gradient */
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%);
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
     background-repeat: no-repeat;
+    min-height: 100vh;
+  }
+
+  /* Ensure the App container also has the background */
+  #root {
+    min-height: 100vh;
+    background: inherit;
   }
 
   /* Prevent horizontal scroll on mobile */
