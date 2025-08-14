@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import LoadingScreen from './components/LoadingScreen';
+import GeometricShapes from './components/GeometricShapes';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -63,6 +64,7 @@ function App() {
 
   return (
     <div className="App">
+      <GeometricShapes />
       <Routes>
         {/* Public Routes */}
         <Route 

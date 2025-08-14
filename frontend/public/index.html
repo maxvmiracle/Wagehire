@@ -13,15 +13,74 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>Wagehire - Interview Management</title>
     <style>
-      /* Ensure background is visible immediately */
+      /* Heavy blue animated background - shows immediately */
       body {
         margin: 0;
         padding: 0;
-        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%);
+        background: linear-gradient(-45deg, #0f172a 0%, #1e3a8a 25%, #1e40af 50%, #1d4ed8 75%, #1e293b 100%);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
         min-height: 100vh;
+        position: relative;
       }
+
+      @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      /* Floating particles */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+          radial-gradient(circle at 20% 80%, rgba(30, 58, 138, 0.3) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(15, 23, 42, 0.3) 0%, transparent 50%),
+          radial-gradient(circle at 40% 40%, rgba(30, 64, 175, 0.3) 0%, transparent 50%),
+          radial-gradient(circle at 90% 90%, rgba(29, 78, 216, 0.3) 0%, transparent 50%);
+        animation: float 20s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        25% { transform: translateY(-20px) rotate(1deg); }
+        50% { transform: translateY(-10px) rotate(-1deg); }
+        75% { transform: translateY(-30px) rotate(0.5deg); }
+      }
+
+      /* Shimmer effect */
+      body::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+          linear-gradient(45deg, transparent 40%, rgba(29, 78, 216, 0.1) 50%, transparent 60%),
+          linear-gradient(-45deg, transparent 40%, rgba(30, 64, 175, 0.1) 50%, transparent 60%);
+        background-size: 100px 100px;
+        animation: shimmer 8s linear infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      @keyframes shimmer {
+        0% { transform: translateX(-100px) translateY(-100px); }
+        100% { transform: translateX(100px) translateY(100px); }
+      }
+
       #root {
         min-height: 100vh;
+        position: relative;
+        z-index: 1;
       }
     </style>
   </head>

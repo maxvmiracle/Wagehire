@@ -398,7 +398,7 @@ const Interviews = () => {
                     className={`h-10 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center relative ${
                   isSelected 
                         ? 'bg-primary-500 text-white shadow-lg' 
-                    : dayInterviews.length > 0
+                      : dayInterviews.length > 0
                             ? 'bg-warning-100 text-warning-700 hover:bg-warning-200 border border-warning-300'
                             : 'text-gray-700 hover:bg-gray-100 border border-transparent'
                 }`}
@@ -639,7 +639,7 @@ const Interviews = () => {
                             <div className="flex items-center space-x-3">
                               <span className="font-semibold text-gray-700">{interview.job_title}</span>
                               {(() => {
-                                return (!interview.scheduled_date || interview.status === 'uncertain');
+                                  return (!interview.scheduled_date || interview.status === 'uncertain');
                               })() ? (
                                 <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-warning-100 text-warning-700 rounded-full border border-warning-200 shadow-sm">
                                   <AlertCircle className="w-3 h-3 mr-1.5" />

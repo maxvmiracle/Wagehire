@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Eye, EyeOff, Phone, Briefcase, Calendar, FileText, Briefcase as BriefcaseIcon, CheckCircle, XCircle } from 'lucide-react';
+import { Eye, EyeOff, Phone, Briefcase, Calendar, FileText, Briefcase as BriefcaseIcon, CheckCircle, XCircle, User, Mail, Lock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const Register = () => {
@@ -31,6 +31,12 @@ const Register = () => {
       special: false
     }
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Register component rendered');
+    console.log('Icons should be visible now');
+  }, []);
 
   // Password strength validation function
   const validatePasswordStrength = (password) => {
@@ -223,17 +229,20 @@ const Register = () => {
               <label htmlFor="name" className="block text-sm font-medium text-white">
                 Full Name
               </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                autoComplete="name"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className={`mt-1 input bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.name ? 'border-danger-500' : ''}`}
-                placeholder="Enter your full name"
-              />
+              <div className="mt-1 relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-800 pointer-events-none z-10" style={{color: '#1e40af'}} />
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  value={formData.name}
+                  onChange={handleChange}
+                  className={`mt-1 input pl-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.name ? 'border-danger-500' : ''}`}
+                  placeholder="Enter your full name"
+                />
+              </div>
               {errors.name && (
                 <p className="mt-1 text-sm text-red-300">{errors.name}</p>
               )}
@@ -243,17 +252,20 @@ const Register = () => {
               <label htmlFor="email" className="block text-sm font-medium text-white">
                 Email address
               </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className={`mt-1 input bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.email ? 'border-danger-500' : ''}`}
-                placeholder="Enter your email"
-              />
+              <div className="mt-1 relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-800 pointer-events-none z-10" style={{color: '#1e40af'}} />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  className={`mt-1 input pl-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.email ? 'border-danger-500' : ''}`}
+                  placeholder="Enter your email"
+                />
+              </div>
               {errors.email && (
                 <p className="mt-1 text-sm text-red-300">{errors.email}</p>
               )}
@@ -264,7 +276,7 @@ const Register = () => {
                 Phone Number (Optional)
               </label>
               <div className="mt-1 relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-800 pointer-events-none z-10" style={{color: '#1e40af'}} />
                 <input
                   id="phone"
                   name="phone"
@@ -286,7 +298,7 @@ const Register = () => {
                 Current Position (Optional)
               </label>
               <div className="mt-1 relative">
-                <BriefcaseIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <BriefcaseIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-800 pointer-events-none z-10" style={{color: '#1e40af'}} />
                 <input
                   id="current_position"
                   name="current_position"
@@ -304,7 +316,7 @@ const Register = () => {
                 Years of Experience (Optional)
               </label>
               <div className="mt-1 relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-800 pointer-events-none z-10" style={{color: '#1e40af'}} />
                 <input
                   id="experience_years"
                   name="experience_years"
@@ -327,7 +339,7 @@ const Register = () => {
                 Skills (Optional)
               </label>
               <div className="mt-1 relative">
-                <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <FileText className="absolute left-3 top-3 h-5 w-5 text-blue-800 pointer-events-none z-10" style={{color: '#1e40af'}} />
                 <textarea
                   id="skills"
                   name="skills"
@@ -345,6 +357,7 @@ const Register = () => {
                 Password
               </label>
               <div className="mt-1 relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-800 pointer-events-none z-10" style={{color: '#1e40af'}} />
                 <input
                   id="password"
                   name="password"
@@ -353,12 +366,12 @@ const Register = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className={`input pr-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.password ? 'border-danger-500' : ''}`}
+                  className={`input pl-10 pr-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.password ? 'border-danger-500' : ''}`}
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center z-10"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
@@ -463,6 +476,7 @@ const Register = () => {
                 Confirm Password
               </label>
               <div className="mt-1 relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-800 pointer-events-none z-10" style={{color: '#1e40af'}} />
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -471,12 +485,12 @@ const Register = () => {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className={`input pr-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.confirmPassword ? 'border-danger-500' : ''}`}
+                  className={`input pl-10 pr-10 bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 placeholder-gray-500 ${errors.confirmPassword ? 'border-danger-500' : ''}`}
                   placeholder="Confirm your password"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center z-10"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
