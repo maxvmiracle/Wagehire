@@ -192,6 +192,7 @@ const Interviews = () => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
     
     const days = [];
     for (let i = 0; i < firstDayOfMonth; i++) {
@@ -260,7 +261,7 @@ const Interviews = () => {
   const calendarDays = getDaysInMonth(currentMonth);
 
   if (loading) {
-    return <LoadingScreen message="Loading interviews..." icon={Calendar} />;
+    return <LoadingScreen message="Loading interviews..." icon={CalendarDays} />;
   }
 
   return (
@@ -272,7 +273,7 @@ const Interviews = () => {
           <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                  <Calendar className="w-6 h-6 text-white" />
+                  <CalendarDays className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold mb-1 overflow-safe">
@@ -478,7 +479,7 @@ const Interviews = () => {
           {filteredInterviews.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Calendar className="w-8 h-8 text-gray-400" />
+                                        <CalendarDays className="w-8 h-8 text-gray-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2 overflow-safe">
                 {searchTerm || statusFilter !== 'all' || selectedDate ? 'No interviews found' : 'No interviews yet'}
