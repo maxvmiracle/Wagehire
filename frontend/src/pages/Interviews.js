@@ -10,7 +10,6 @@ import {
   Plus,
   Search,
   Filter,
-  MoreVertical,
   Edit,
   Trash2,
   Clock,
@@ -96,17 +95,6 @@ const Interviews = () => {
     }
   };
 
-  const handleRequestNotificationPermission = async () => {
-    const result = await notificationService.requestPermission();
-    setNotificationPermission(result.granted);
-    
-    if (result.granted) {
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
-    }
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
@@ -148,17 +136,6 @@ const Interviews = () => {
       default:
         return <Award className="w-4 h-4" />;
     }
-  };
-
-  const formatInterviewDate = (dateString) => {
-    if (!dateString) return 'TBD';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
   };
 
   const formatInterviewTime = (dateString) => {

@@ -175,9 +175,6 @@ const InterviewDetail = () => {
             <div className="p-3">
               <div className="grid grid-cols-2 gap-2">
                 {(() => {
-                  const today = new Date();
-                  const interviewDate = interview.scheduled_date ? new Date(interview.scheduled_date) : null;
-                  
                   // Show "Not Determined" only if status is uncertain or no scheduled date
                   return (!interview.scheduled_date || interview.status === 'uncertain');
                 })() ? (
