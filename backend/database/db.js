@@ -41,6 +41,9 @@ const initializeTables = () => {
           current_position TEXT,
           experience_years INTEGER,
           skills TEXT,
+          email_verified INTEGER DEFAULT 0,
+          email_verification_token TEXT,
+          email_verification_expires DATETIME,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )

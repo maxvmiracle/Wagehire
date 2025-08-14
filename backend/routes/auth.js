@@ -197,8 +197,18 @@ router.post('/register', [
   } catch (error) {
     console.error('Registration error:', error);
     console.error('Error stack:', error.stack);
+    console.error('Request body:', req.body);
+    
+    // Provide more specific error messages
+    let errorMessage = 'Internal server error';
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      errorMessage = 'User already exists with this email';
+    } else if (error.code === 'SQLITE_ERROR') {
+      errorMessage = 'Database error occurred';
+    }
+    
     res.status(500).json({ 
-      error: 'Internal server error',
+      error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
