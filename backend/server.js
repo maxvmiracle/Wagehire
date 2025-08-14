@@ -15,7 +15,7 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     // Allow localhost for development
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('172.86.90.139')) {
       return callback(null, true);
     }
     
@@ -28,12 +28,13 @@ const corsOptions = {
     if (origin.includes('vercel.app')) {
       return callback(null, true);
     }
-    
+    if(origin === 'https://wagehire.vercel.app') {
+      return callback(null, true);
     // Allow your custom domain if you have one
     // if (origin.includes('yourdomain.com')) {
     //   return callback(null, true);
     // }
-    
+    }
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
