@@ -1,16 +1,14 @@
 services:
   - type: web
-    name: wagehire
+    name: wagehire-backend
     env: node
     plan: free
-    buildCommand: npm run install-all && npm run build
+    buildCommand: npm install
     startCommand: cd backend && node server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: REACT_APP_API_URL
-        value: /api
     healthCheckPath: /api/health
     autoDeploy: true 

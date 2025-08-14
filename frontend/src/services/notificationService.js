@@ -1,5 +1,5 @@
 import { toast } from 'react-hot-toast';
-import { Bell, Clock, Calendar, AlertTriangle } from 'lucide-react';
+import { Clock, Calendar, AlertTriangle } from 'lucide-react';
 
 class NotificationService {
   constructor() {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import LoadingScreen from '../components/LoadingScreen';
@@ -13,7 +13,6 @@ import {
   Mail,
   FileText,
   DollarSign,
-  ExternalLink,
   Edit,
   Trash2,
   CheckCircle,
@@ -24,9 +23,7 @@ import {
   Globe,
   Briefcase,
   Award,
-  Hash,
-  Activity,
-  Phone
+  Hash
 } from 'lucide-react';
 
 const InterviewDetail = () => {
@@ -79,19 +76,6 @@ const InterviewDetail = () => {
         return <AlertCircle className="w-5 h-5 text-primary-600" />;
       default:
         return <AlertCircle className="w-5 h-5 text-warning-600" />;
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-success-100 text-success-800 border-success-200';
-      case 'cancelled':
-        return 'bg-danger-100 text-danger-800 border-danger-200';
-      case 'scheduled':
-        return 'bg-primary-100 text-primary-800 border-primary-200';
-      default:
-        return 'bg-warning-100 text-warning-800 border-warning-200';
     }
   };
 
@@ -193,10 +177,6 @@ const InterviewDetail = () => {
                 {(() => {
                   const today = new Date();
                   const interviewDate = interview.scheduled_date ? new Date(interview.scheduled_date) : null;
-                  const isToday = interviewDate && 
-                    interviewDate.getDate() === today.getDate() && 
-                    interviewDate.getMonth() === today.getMonth() && 
-                    interviewDate.getFullYear() === today.getFullYear();
                   
                   // Show "Not Determined" only if status is uncertain or no scheduled date
                   return (!interview.scheduled_date || interview.status === 'uncertain');

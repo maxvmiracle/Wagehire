@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, Sparkles, Users, Calendar, User, Shield, Mail, FileText, Settings, Home } from 'lucide-react';
+import { Briefcase, Sparkles } from 'lucide-react';
 
 const LoadingScreen = ({ message = "Loading...", icon = Briefcase }) => {
   return (

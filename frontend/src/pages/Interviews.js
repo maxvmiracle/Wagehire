@@ -1,38 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import LoadingScreen from '../components/LoadingScreen';
 import notificationService from '../services/notificationService';
+import LoadingScreen from '../components/LoadingScreen';
 import NotificationSettings from '../components/NotificationSettings';
 import {
   Plus,
-  Calendar,
   Search,
   Filter,
-  Eye,
+  MoreVertical,
   Edit,
   Trash2,
   Clock,
-  Building,
   User,
-  MapPin,
-  ExternalLink,
-  Linkedin,
-  Link as LinkIcon,
   ChevronLeft,
   ChevronRight,
   Bell,
   Award,
   Hash,
   Mail,
-  Globe,
-  Briefcase,
   CheckCircle,
   XCircle,
   AlertCircle,
-  CalendarDays
+  CalendarDays,
+  Eye
 } from 'lucide-react';
 
 const Interviews = () => {
@@ -136,11 +129,11 @@ const Interviews = () => {
       case 'cancelled':
         return <XCircle className="w-4 h-4" />;
       case 'scheduled':
-        return <Calendar className="w-4 h-4" />;
+        return <CalendarDays className="w-4 h-4" />;
       case 'uncertain':
         return <AlertCircle className="w-4 h-4" />;
       default:
-        return <Calendar className="w-4 h-4" />;
+        return <CalendarDays className="w-4 h-4" />;
     }
   };
 
@@ -195,18 +188,10 @@ const Interviews = () => {
            d1.getDate() === d2.getDate();
   };
 
-  const isSameMonth = (date1, date2) => {
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
-    return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth();
-  };
-
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDayOfMonth = new Date(year, month, 1).getDay();
     
     const days = [];
     for (let i = 0; i < firstDayOfMonth; i++) {
@@ -427,7 +412,6 @@ const Interviews = () => {
             
             const dayInterviews = getInterviewsForDate(day);
             const isSelected = selectedDate && isSameDay(day, selectedDate);
-            const isToday = isSameDay(day, new Date());
             
             return (
               <button
@@ -436,9 +420,7 @@ const Interviews = () => {
                     className={`h-10 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center relative ${
                   isSelected 
                         ? 'bg-primary-500 text-white shadow-lg' 
-                    : isToday 
-                          ? 'bg-primary-100 text-primary-700 border-2 border-primary-300'
-                      : dayInterviews.length > 0
+                    : dayInterviews.length > 0
                             ? 'bg-warning-100 text-warning-700 hover:bg-warning-200 border border-warning-300'
                             : 'text-gray-700 hover:bg-gray-100 border border-transparent'
                 }`}
@@ -570,13 +552,6 @@ const Interviews = () => {
                                   <div className="flex items-center space-x-3">
                                     <span className="font-semibold text-gray-700">{interview.job_title}</span>
                                     {(() => {
-                                      const today = new Date();
-                                      const interviewDate = interview.scheduled_date ? new Date(interview.scheduled_date) : null;
-                                      const isToday = interviewDate && 
-                                        interviewDate.getDate() === today.getDate() && 
-                                        interviewDate.getMonth() === today.getMonth() && 
-                                        interviewDate.getFullYear() === today.getFullYear();
-                                      
                                         return (!interview.scheduled_date || interview.status === 'uncertain');
                                     })() ? (
                                       <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-warning-100 text-warning-700 rounded-full border border-warning-200 shadow-sm">
@@ -594,7 +569,7 @@ const Interviews = () => {
                                     ) : (
                                       <>
                                         <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-primary-100 text-primary-700 rounded-full border border-primary-200 shadow-sm">
-                                          <Calendar className="w-3 h-3 mr-1.5" />
+                                          <CalendarDays className="w-3 h-3 mr-1.5" />
                                           {formatShortDate(interview.scheduled_date)}
                                         </span>
                                         <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-warning-100 text-warning-700 rounded-full border border-warning-200 shadow-sm">
@@ -686,14 +661,7 @@ const Interviews = () => {
                             <div className="flex items-center space-x-3">
                               <span className="font-semibold text-gray-700">{interview.job_title}</span>
                               {(() => {
-                                const today = new Date();
-                                const interviewDate = interview.scheduled_date ? new Date(interview.scheduled_date) : null;
-                                const isToday = interviewDate && 
-                                  interviewDate.getDate() === today.getDate() && 
-                                  interviewDate.getMonth() === today.getMonth() && 
-                                  interviewDate.getFullYear() === today.getFullYear();
-                                
-                                  return (!interview.scheduled_date || interview.status === 'uncertain');
+                                return (!interview.scheduled_date || interview.status === 'uncertain');
                               })() ? (
                                 <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-warning-100 text-warning-700 rounded-full border border-warning-200 shadow-sm">
                                   <AlertCircle className="w-3 h-3 mr-1.5" />
@@ -710,7 +678,7 @@ const Interviews = () => {
                               ) : (
                                 <>
                                   <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-primary-100 text-primary-700 rounded-full border border-primary-200 shadow-sm">
-                                    <Calendar className="w-3 h-3 mr-1.5" />
+                                    <CalendarDays className="w-3 h-3 mr-1.5" />
                                     {formatShortDate(interview.scheduled_date)}
                                   </span>
                                   <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-warning-100 text-warning-700 rounded-full border border-warning-200 shadow-sm">

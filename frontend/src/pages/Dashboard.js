@@ -15,7 +15,6 @@ import {
   XCircle,
   AlertCircle,
   ArrowRight,
-  Star,
   Activity,
   Target,
   BookOpen,

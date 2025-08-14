@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { UserCheck, Eye, EyeOff, Phone, Briefcase, Calendar, MapPin, FileText, Briefcase as BriefcaseIcon, CheckCircle, XCircle } from 'lucide-react';
+import { Eye, EyeOff, Phone, Briefcase, Calendar, FileText, Briefcase as BriefcaseIcon, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const Register = () => {
@@ -39,7 +39,7 @@ const Register = () => {
       uppercase: /[A-Z]/.test(password),
       lowercase: /[a-z]/.test(password),
       number: /\d/.test(password),
-      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+      special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
     };
 
     const score = Object.values(requirements).filter(Boolean).length;
@@ -110,7 +110,7 @@ const Register = () => {
     }
     
     // Optional fields validation
-    if (formData.phone && !formData.phone.match(/^[\+]?[1-9][\d]{0,15}$/)) {
+    if (formData.phone && !formData.phone.match(/^[+]?[1-9][\d]{0,15}$/)) {
       newErrors.phone = 'Please enter a valid phone number';
     }
     
