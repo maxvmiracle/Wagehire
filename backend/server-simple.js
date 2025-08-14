@@ -30,10 +30,6 @@ const corsOptions = {
     }
     if(origin === 'https://wagehire.vercel.app') {
       return callback(null, true);
-    // Allow your custom domain if you have one
-    // if (origin.includes('yourdomain.com')) {
-    //   return callback(null, true);
-    // }
     }
     callback(new Error('Not allowed by CORS'));
   },
@@ -51,7 +47,6 @@ app.use(express.urlencoded({ extended: true }));
 // Database initialization
 const initDatabase = require('./database/init');
 const migrateDatabase = require('./migrate-database');
-const { initializeDatabaseWithBackup } = require('./database/backup');
 
 // Email service initialization
 const { verifyEmailConfig } = require('./services/emailService');
@@ -92,17 +87,7 @@ app.use('*', (req, res) => {
 // Initialize database and start server
 async function startServer() {
   try {
-    // For production (Vercel), we don't need to connect to a persistent database
-    // The in-memory database will be created by initDatabase
     console.log('Database initialization started');
-    
-    // Initialize database with backup/restore functionality (non-blocking)
-    try {
-      await initializeDatabaseWithBackup();
-      console.log('Database backup/restore initialization completed');
-    } catch (error) {
-      console.warn('Backup/restore initialization failed, continuing without it:', error.message);
-    }
     
     await initDatabase();
     console.log('Database initialized successfully');
