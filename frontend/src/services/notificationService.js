@@ -32,6 +32,24 @@ class NotificationService {
   getAccessPointGuidance() {
     const currentHost = window.location.hostname;
     const isIPAddress = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(currentHost);
+    const isLocalhost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Check if it's a production deployment (likely proxied)
+    if (isProduction && !isLocalhost) {
+      return {
+        type: 'production-deployment',
+        message: `You're accessing the site via production deployment (${currentHost}). Notifications may be blocked due to proxy/load balancer configuration.`,
+        instructions: [
+          'Click the lock/shield icon in your browser address bar',
+          'Find "Notifications" or "Site permissions"',
+          'Change from "Block" to "Allow"',
+          'Refresh the page and try enabling notifications again',
+          'If notifications still don\'t work, try accessing the site directly without any proxy'
+        ],
+        additionalInfo: 'Production deployments often use proxies or load balancers that can affect notification permissions.'
+      };
+    }
     
     if (isIPAddress) {
       return {
@@ -44,7 +62,7 @@ class NotificationService {
           'Refresh the page and try enabling notifications again'
         ]
       };
-    } else if (currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
+    } else if (!isLocalhost) {
       return {
         type: 'domain-access',
         message: `You're accessing the site via domain (${currentHost}). Notifications may be blocked for this domain.`,

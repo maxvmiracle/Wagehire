@@ -3,8 +3,8 @@ import axios from 'axios';
 // Determine the base URL based on environment
 const getBaseURL = () => {
   if (process.env.NODE_ENV === 'production') {
-    // In production, use the same domain (Vercel will handle routing)
-    return '/api';
+    // In production, use the environment variable or fallback to relative path
+    return process.env.REACT_APP_API_URL || '/api';
   }
   // In development, use the proxy
   return '/api';

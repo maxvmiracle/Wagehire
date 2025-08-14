@@ -1,168 +1,168 @@
-# 🚀 Render Deployment Guide
+# Render Deployment Guide for Wagehire
 
-This guide will help you deploy Wagehire to Render and fix the deployment issues.
+This guide will help you deploy the Wagehire application on Render.
 
-## 🔧 **Problem Fixed**
+## Prerequisites
 
-The original error was:
+1. A Render account (free tier available)
+2. Your code pushed to a Git repository (GitHub, GitLab, etc.)
+
+## Deployment Steps
+
+### 1. Backend Deployment
+
+1. **Connect your repository to Render:**
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Click "New +" and select "Web Service"
+   - Connect your Git repository
+
+2. **Configure the backend service:**
+   - **Name:** `wagehire-backend`
+   - **Environment:** `Node`
+   - **Build Command:** `npm install`
+   - **Start Command:** `node server.js`
+   - **Root Directory:** Leave empty (or `backend` if your backend is in a subdirectory)
+
+3. **Environment Variables:**
+   ```
+   NODE_ENV=production
+   PORT=10000
+   ```
+
+4. **Health Check Path:** `/api/health`
+
+### 2. Frontend Deployment
+
+1. **Create another web service for the frontend:**
+   - Click "New +" and select "Static Site"
+   - Connect the same Git repository
+
+2. **Configure the frontend service:**
+   - **Name:** `wagehire-frontend`
+   - **Build Command:** `cd frontend && npm install && npm run build`
+   - **Publish Directory:** `frontend/build`
+   - **Root Directory:** Leave empty
+
+3. **Environment Variables:**
+   ```
+   REACT_APP_API_URL=https://your-backend-service-name.onrender.com/api
+   NODE_ENV=production
+   ```
+
+### 3. Using render.yaml (Alternative Method)
+
+If you prefer to use the `render.yaml` file:
+
+1. Make sure your `render.yaml` is in the root of your repository
+2. In Render dashboard, create a new "Blueprint" service
+3. Connect your repository
+4. Render will automatically detect and use the `render.yaml` configuration
+
+## Important Configuration Notes
+
+### Backend Configuration
+
+- The backend will be available at: `https://your-backend-service-name.onrender.com`
+- API endpoints will be at: `https://your-backend-service-name.onrender.com/api/*`
+- Health check endpoint: `https://your-backend-service-name.onrender.com/api/health`
+
+### Frontend Configuration
+
+- The frontend will be available at: `https://your-frontend-service-name.onrender.com`
+- Make sure to update the `REACT_APP_API_URL` environment variable to point to your backend service
+
+### CORS Configuration
+
+The backend is configured to allow requests from:
+- Localhost (for development)
+- All Render domains (`*.onrender.com`)
+- You can add custom domains by uncommenting and modifying the CORS configuration in `backend/server.js`
+
+## Environment Variables Setup
+
+### Backend Environment Variables (in Render Dashboard)
+
 ```
-Error: Cannot find module '/opt/render/project/src/index.js'
-```
-
-This happened because Render was looking for `index.js` in the root directory, but your backend was in the `backend/` folder.
-
-## ✅ **Solution Implemented**
-
-1. **Created `index.js`** in the root directory that properly loads the backend
-2. **Updated `package.json`** with Render-specific scripts
-3. **Created `render.yaml`** for proper service configuration
-4. **Added deployment scripts** for build and start processes
-
-## 🚀 **Deployment Steps**
-
-### **Step 1: Prepare Your Repository**
-
-Make sure your repository has these files:
-- ✅ `index.js` (new entry point)
-- ✅ `package.json` (updated with render scripts)
-- ✅ `render.yaml` (deployment configuration)
-- ✅ `backend/server.js` (your backend server)
-- ✅ `frontend/` (your React app)
-
-### **Step 2: Deploy to Render**
-
-#### **Option A: Using render.yaml (Recommended)**
-
-1. **Connect your GitHub repository** to Render
-2. **Create a new Web Service**
-3. **Select "Use render.yaml"** during setup
-4. **Render will automatically**:
-   - Deploy both backend and frontend services
-   - Set up environment variables
-   - Configure health checks
-
-#### **Option B: Manual Setup**
-
-**Backend Service:**
-1. **Create a new Web Service**
-2. **Environment**: Node
-3. **Build Command**: `npm run render-build`
-4. **Start Command**: `npm run render-start`
-5. **Health Check Path**: `/api/health`
-
-**Frontend Service:**
-1. **Create a new Static Site**
-2. **Build Command**: `cd frontend && npm install && npm run build`
-3. **Publish Directory**: `frontend/build`
-
-### **Step 3: Environment Variables**
-
-Set these environment variables in Render:
-
-```env
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-here
-
-# Email Configuration (for Gmail)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
-
-# Frontend URL (update with your frontend URL)
-FRONTEND_URL=https://your-frontend-domain.onrender.com
-
-# Database Reset (set to 'false' for production)
-RESET_DB=false
-
-# Node Environment
 NODE_ENV=production
-
-# Port (Render sets this automatically)
 PORT=10000
 ```
 
-### **Step 4: Update Frontend API URL**
+### Frontend Environment Variables (in Render Dashboard)
 
-In your frontend service, set:
-```env
-REACT_APP_API_URL=https://your-backend-service.onrender.com
+```
+REACT_APP_API_URL=https://your-backend-service-name.onrender.com/api
+NODE_ENV=production
 ```
 
-## 🔍 **Troubleshooting**
+## Troubleshooting
 
-### **Issue 1: Build Fails**
-**Solution**: Check that all dependencies are in `package.json`
+### Common Issues
 
-### **Issue 2: Server Won't Start**
-**Solution**: 
-1. Check environment variables are set
-2. Verify `JWT_SECRET` is configured
-3. Check logs for specific errors
+1. **Build Failures:**
+   - Check that all dependencies are in `package.json`
+   - Ensure build commands are correct
+   - Check the build logs in Render dashboard
 
-### **Issue 3: Database Issues**
-**Solution**:
-1. Set `RESET_DB=false` for production
-2. Ensure database files are writable
-3. Check SQLite permissions
+2. **CORS Errors:**
+   - Verify the frontend URL is allowed in backend CORS configuration
+   - Check that `REACT_APP_API_URL` is correctly set
 
-### **Issue 4: Email Not Working**
-**Solution**:
-1. Verify Gmail App Password is correct
-2. Check `EMAIL_USER` and `EMAIL_PASS` are set
-3. Ensure 2FA is enabled on Gmail
+3. **API Connection Issues:**
+   - Ensure the backend service is running (check health endpoint)
+   - Verify the API URL in frontend environment variables
+   - Check that the backend service name in the URL matches your actual service name
 
-## 📋 **Deployment Checklist**
+4. **Database Issues:**
+   - The application uses SQLite with in-memory storage for Render
+   - Data will be reset on each deployment
+   - For persistent data, consider using a database service
 
-- [ ] Repository connected to Render
-- [ ] Environment variables configured
-- [ ] Backend service deployed
-- [ ] Frontend service deployed
-- [ ] Health check passing (`/api/health`)
-- [ ] Email configuration working
-- [ ] Database accessible
-- [ ] Frontend can connect to backend
+### Health Check
 
-## 🎯 **Expected Results**
-
-After successful deployment:
-1. **Backend**: `https://your-backend.onrender.com`
-2. **Frontend**: `https://your-frontend.onrender.com`
-3. **Health Check**: `https://your-backend.onrender.com/api/health` returns `{"status":"ok"}`
-4. **API Endpoints**: All backend routes working
-5. **Email**: Verification emails sent successfully
-
-## 🔧 **Manual Deployment Commands**
-
-If you need to deploy manually:
-
+Test your backend is working:
 ```bash
-# Install dependencies
-npm run install-all
-
-# Build frontend
-npm run build
-
-# Start backend
-npm run render-start
+curl https://your-backend-service-name.onrender.com/api/health
 ```
 
-## 📞 **Support**
+Expected response:
+```json
+{"status":"OK","message":"Wagehire API is running"}
+```
+
+## Post-Deployment
+
+1. **Test the application:**
+   - Visit your frontend URL
+   - Try to register/login
+   - Test all major features
+
+2. **Monitor the services:**
+   - Check Render dashboard for any errors
+   - Monitor logs for issues
+   - Set up alerts if needed
+
+3. **Custom Domain (Optional):**
+   - You can add custom domains in Render dashboard
+   - Update CORS configuration to allow your custom domain
+
+## Security Notes
+
+- All environment variables are encrypted in Render
+- HTTPS is automatically enabled
+- CORS is configured to only allow specific domains
+- Helmet.js provides additional security headers
+
+## Cost Considerations
+
+- Free tier includes:
+  - 750 hours per month
+  - Services sleep after 15 minutes of inactivity
+  - 512MB RAM, 0.1 CPU
+- Paid plans start at $7/month for always-on services
+
+## Support
 
 If you encounter issues:
-1. Check Render logs for specific errors
-2. Verify all environment variables are set
-3. Test health check endpoint
-4. Check database permissions
-5. Verify email configuration
-
-## 🎉 **Success!**
-
-Once deployed, your Wagehire application will be accessible from anywhere with:
-- ✅ Automatic scaling
-- ✅ SSL certificates
-- ✅ Global CDN
-- ✅ Health monitoring
-- ✅ Automatic deployments
-
-The deployment should now work correctly with the new `index.js` entry point! 
+1. Check Render documentation: https://render.com/docs
+2. Review build and runtime logs in Render dashboard
+3. Check the application logs for specific error messages 

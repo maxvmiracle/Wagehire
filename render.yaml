@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: cd backend && node server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -21,5 +21,7 @@ services:
     staticPublishPath: frontend/build
     envVars:
       - key: REACT_APP_API_URL
-        value: https://wagehire-backend.onrender.com
+        value: https://wagehire-backend.onrender.com/api
+      - key: NODE_ENV
+        value: production
     autoDeploy: true 
