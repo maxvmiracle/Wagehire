@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: wagehire-backend
+    env: node
+    plan: free
+    buildCommand: npm run render-build
+    startCommand: npm run render-start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+  - type: web
+    name: wagehire-frontend
+    env: static
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://wagehire-backend.onrender.com
+    autoDeploy: true 
