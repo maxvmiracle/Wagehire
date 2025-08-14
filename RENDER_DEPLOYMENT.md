@@ -9,49 +9,58 @@ This guide will help you deploy the Wagehire application on Render.
 
 ## Deployment Steps
 
-### 1. Backend Deployment
+### Single Service Deployment (Recommended)
+
+The application is configured to deploy both frontend and backend as a single service on Render.
 
 1. **Connect your repository to Render:**
    - Go to [Render Dashboard](https://dashboard.render.com)
    - Click "New +" and select "Web Service"
    - Connect your Git repository
 
-2. **Configure the backend service:**
-   - **Name:** `wagehire-backend`
+2. **Configure the service:**
+   - **Name:** `wagehire`
    - **Environment:** `Node`
-   - **Build Command:** `npm install`
-   - **Start Command:** `node server.js`
-   - **Root Directory:** Leave empty (or `backend` if your backend is in a subdirectory)
+   - **Build Command:** `npm run install-all && npm run build`
+   - **Start Command:** `cd backend && node server.js`
+   - **Root Directory:** Leave empty
 
 3. **Environment Variables:**
    ```
    NODE_ENV=production
    PORT=10000
+   REACT_APP_API_URL=/api
    ```
 
 4. **Health Check Path:** `/api/health`
 
-### 2. Frontend Deployment
+### Alternative: Separate Services (Legacy Method)
 
-1. **Create another web service for the frontend:**
-   - Click "New +" and select "Static Site"
-   - Connect the same Git repository
+If you prefer separate services, you can create two services:
 
-2. **Configure the frontend service:**
-   - **Name:** `wagehire-frontend`
-   - **Build Command:** `cd frontend && npm install && npm run build`
-   - **Publish Directory:** `frontend/build`
-   - **Root Directory:** Leave empty
+#### Backend Service
+- **Type:** Web Service
+- **Build Command:** `npm install`
+- **Start Command:** `cd backend && node server.js`
+- **Environment Variables:**
+  ```
+  NODE_ENV=production
+  PORT=10000
+  ```
 
-3. **Environment Variables:**
-   ```
-   REACT_APP_API_URL=https://your-backend-service-name.onrender.com/api
-   NODE_ENV=production
-   ```
+#### Frontend Service
+- **Type:** Static Site
+- **Build Command:** `cd frontend && npm install && npm run build`
+- **Publish Directory:** `frontend/build`
+- **Environment Variables:**
+  ```
+  REACT_APP_API_URL=https://your-backend-service-name.onrender.com/api
+  NODE_ENV=production
+  ```
 
-### 3. Using render.yaml (Alternative Method)
+## Using render.yaml (Recommended)
 
-If you prefer to use the `render.yaml` file:
+The `render.yaml` file is configured for single-service deployment:
 
 1. Make sure your `render.yaml` is in the root of your repository
 2. In Render dashboard, create a new "Blueprint" service
@@ -60,16 +69,11 @@ If you prefer to use the `render.yaml` file:
 
 ## Important Configuration Notes
 
-### Backend Configuration
+### Single Service Configuration
 
-- The backend will be available at: `https://your-backend-service-name.onrender.com`
-- API endpoints will be at: `https://your-backend-service-name.onrender.com/api/*`
-- Health check endpoint: `https://your-backend-service-name.onrender.com/api/health`
-
-### Frontend Configuration
-
-- The frontend will be available at: `https://your-frontend-service-name.onrender.com`
-- Make sure to update the `REACT_APP_API_URL` environment variable to point to your backend service
+- **Frontend:** Served from the root URL (e.g., `https://wagehire.onrender.com`)
+- **Backend API:** Available at `/api/*` (e.g., `https://wagehire.onrender.com/api/health`)
+- **React Router:** Handled by the backend server in production
 
 ### CORS Configuration
 
@@ -80,18 +84,12 @@ The backend is configured to allow requests from:
 
 ## Environment Variables Setup
 
-### Backend Environment Variables (in Render Dashboard)
+### Single Service Environment Variables (in Render Dashboard)
 
 ```
 NODE_ENV=production
 PORT=10000
-```
-
-### Frontend Environment Variables (in Render Dashboard)
-
-```
-REACT_APP_API_URL=https://your-backend-service-name.onrender.com/api
-NODE_ENV=production
+REACT_APP_API_URL=/api
 ```
 
 ## Troubleshooting
@@ -99,18 +97,19 @@ NODE_ENV=production
 ### Common Issues
 
 1. **Build Failures:**
-   - Check that all dependencies are in `package.json`
+   - Check that all dependencies are in `package.json` files
    - Ensure build commands are correct
    - Check the build logs in Render dashboard
 
-2. **CORS Errors:**
-   - Verify the frontend URL is allowed in backend CORS configuration
-   - Check that `REACT_APP_API_URL` is correctly set
+2. **"Route not found" Error:**
+   - This usually means you're accessing the wrong URL
+   - Make sure to use the main service URL, not a separate backend URL
+   - The frontend should be served from the root URL
 
 3. **API Connection Issues:**
-   - Ensure the backend service is running (check health endpoint)
-   - Verify the API URL in frontend environment variables
-   - Check that the backend service name in the URL matches your actual service name
+   - Ensure the service is running (check health endpoint)
+   - Verify the API URL in environment variables
+   - For single service: use `/api` as the API URL
 
 4. **Database Issues:**
    - The application uses SQLite with in-memory storage for Render
@@ -119,9 +118,9 @@ NODE_ENV=production
 
 ### Health Check
 
-Test your backend is working:
+Test your service is working:
 ```bash
-curl https://your-backend-service-name.onrender.com/api/health
+curl https://your-service-name.onrender.com/api/health
 ```
 
 Expected response:
@@ -129,14 +128,22 @@ Expected response:
 {"status":"OK","message":"Wagehire API is running"}
 ```
 
+### Frontend Access
+
+Your React application should be accessible at:
+```
+https://your-service-name.onrender.com
+```
+
 ## Post-Deployment
 
 1. **Test the application:**
-   - Visit your frontend URL
+   - Visit your service URL
    - Try to register/login
    - Test all major features
+   - Verify API endpoints work
 
-2. **Monitor the services:**
+2. **Monitor the service:**
    - Check Render dashboard for any errors
    - Monitor logs for issues
    - Set up alerts if needed

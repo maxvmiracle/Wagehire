@@ -67,6 +67,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Wagehire API is running' });
 });
 
+// Serve static files from the React build directory in production
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the React build directory
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+  });
+}
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -76,10 +87,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
+// 404 handler (only for API routes in development)
+if (process.env.NODE_ENV === 'development') {
+  app.use('*', (req, res) => {
+    res.status(404).json({ error: 'Route not found' });
+  });
+}
 
 // Initialize database and start server
 async function startServer() {
