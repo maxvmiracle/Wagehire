@@ -92,12 +92,18 @@ enable_confirmations = false
 # Template for sending a confirmation message when a user signs up with a phone number.
 template = "Your code is {{ .Code }}"
 
-[edge_runtime]
-# Configure the Deno runtime version for Edge Functions.
-# deno_version = "1.35.2"
+[analytics]
+# Enable/disable analytics tracking for this project.
+enabled = false
+# Configure analytics to track specific events.
+# [analytics.events]
+# # Configure the `user_signup` event.
+# user_signup = { sql = "select * from auth.users" }
 
-# Configure the import map for Edge Functions.
-# import_map_path = "./supabase/functions/import_map.json"
-
-# Configure the flags for the Deno runtime.
-# deno_flags = ["--allow-all"] 
+[functions]
+# Configure the JWT secret used to decode your JWT tokens on the edge runtime.
+# You can generate a new secret by running `openssl rand -base64 32`.
+# jwt_secret = "your-super-secret-jwt-token-with-at-least-32-characters-long"
+# Configure the refresh token secret used to decode your refresh tokens on the edge runtime.
+# You can generate a new secret by running `openssl rand -base64 32`.
+# refresh_token_secret = "your-super-secret-refresh-token-with-at-least-32-characters-long" 

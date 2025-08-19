@@ -1,53 +1,58 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsHeaders } from '../_shared/cors.ts'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+// Use built-in Supabase environment variables
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    )
+    const url = new URL(req.url)
+    const path = url.pathname
+    const method = req.method
 
-    // Parse the request
-    const { method, url } = req
-    const path = new URL(url).pathname
-    const body = method !== 'GET' ? await req.json() : null
-
-    // Route handling
-    if (path.startsWith('/api/auth')) {
-      return handleAuth(req, supabaseClient)
-    } else if (path.startsWith('/api/interviews')) {
-      return handleInterviews(req, supabaseClient)
-    } else if (path.startsWith('/api/users')) {
-      return handleUsers(req, supabaseClient)
-    } else if (path.startsWith('/api/admin')) {
-      return handleAdmin(req, supabaseClient)
-    } else if (path.startsWith('/api/candidates')) {
-      return handleCandidates(req, supabaseClient)
-    } else if (path === '/api/health') {
+    // Health check
+    if (path === '/api/health' && method === 'GET') {
       return new Response(
-        JSON.stringify({ status: 'OK', message: 'Wagehire API is running on Supabase' }),
+        JSON.stringify({ status: 'OK', message: 'Wagehire API is running' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200 
         }
       )
+    }
+
+    // Auth routes
+    if (path.startsWith('/api/auth')) {
+      return await handleAuthRoutes(req, path, method)
+    }
+
+    // Interview routes
+    if (path.startsWith('/api/interviews')) {
+      return await handleInterviewRoutes(req, path, method)
+    }
+
+    // User routes
+    if (path.startsWith('/api/users')) {
+      return await handleUserRoutes(req, path, method)
+    }
+
+    // Admin routes
+    if (path.startsWith('/api/admin')) {
+      return await handleAdminRoutes(req, path, method)
+    }
+
+    // Candidate routes
+    if (path.startsWith('/api/candidates')) {
+      return await handleCandidateRoutes(req, path, method)
     }
 
     // 404 for unknown routes
@@ -60,6 +65,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    console.error('Error:', error)
     return new Response(
       JSON.stringify({ error: 'Internal server error', message: error.message }),
       { 
@@ -70,21 +76,37 @@ serve(async (req) => {
   }
 })
 
-// Auth handlers
-async function handleAuth(req: Request, supabase: any) {
-  const { method } = req
-  const body = method !== 'GET' ? await req.json() : null
+// Auth routes handler
+async function handleAuthRoutes(req: Request, path: string, method: string) {
+  const url = new URL(req.url)
+  
+  if (path === '/api/auth/register' && method === 'POST') {
+    const body = await req.json()
+    const { email, password, name, role = 'user' } = body
 
-  if (method === 'POST' && req.url.includes('/register')) {
-    // Handle user registration
-    const { email, password, name, role } = body
-    
-    const { data, error } = await supabase.auth.signUp({
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single()
+
+    if (existingUser) {
+      return new Response(
+        JSON.stringify({ error: 'User already exists' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      )
+    }
+
+    // Create user
+    const { data: user, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: { name, role }
-      }
+      email_confirm: true,
+      user_metadata: { name, role }
     })
 
     if (error) {
@@ -98,7 +120,10 @@ async function handleAuth(req: Request, supabase: any) {
     }
 
     return new Response(
-      JSON.stringify({ message: 'User registered successfully', user: data.user }),
+      JSON.stringify({ 
+        message: 'User registered successfully',
+        user: { id: user.user.id, email: user.user.email, name, role }
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 201 
@@ -106,10 +131,10 @@ async function handleAuth(req: Request, supabase: any) {
     )
   }
 
-  if (method === 'POST' && req.url.includes('/login')) {
-    // Handle user login
+  if (path === '/api/auth/login' && method === 'POST') {
+    const body = await req.json()
     const { email, password } = body
-    
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -117,7 +142,7 @@ async function handleAuth(req: Request, supabase: any) {
 
     if (error) {
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: 'Invalid credentials' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
@@ -127,9 +152,9 @@ async function handleAuth(req: Request, supabase: any) {
 
     return new Response(
       JSON.stringify({ 
-        message: 'Login successful', 
+        message: 'Login successful',
         user: data.user,
-        session: data.session 
+        session: data.session
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -139,7 +164,7 @@ async function handleAuth(req: Request, supabase: any) {
   }
 
   return new Response(
-    JSON.stringify({ error: 'Auth endpoint not found' }),
+    JSON.stringify({ error: 'Auth route not found' }),
     { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 404 
@@ -147,16 +172,15 @@ async function handleAuth(req: Request, supabase: any) {
   )
 }
 
-// Interview handlers
-async function handleInterviews(req: Request, supabase: any) {
-  const { method } = req
-  const body = method !== 'GET' ? await req.json() : null
-
-  if (method === 'GET') {
-    // Get all interviews
-    const { data, error } = await supabase
+// Interview routes handler
+async function handleInterviewRoutes(req: Request, path: string, method: string) {
+  const url = new URL(req.url)
+  
+  if (path === '/api/interviews' && method === 'GET') {
+    const { data: interviews, error } = await supabase
       .from('interviews')
       .select('*')
+      .order('created_at', { ascending: false })
 
     if (error) {
       return new Response(
@@ -169,7 +193,7 @@ async function handleInterviews(req: Request, supabase: any) {
     }
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify(interviews),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
@@ -177,12 +201,20 @@ async function handleInterviews(req: Request, supabase: any) {
     )
   }
 
-  if (method === 'POST') {
-    // Create new interview
-    const { data, error } = await supabase
+  if (path === '/api/interviews' && method === 'POST') {
+    const body = await req.json()
+    const { candidate_id, interviewer_id, scheduled_time, status = 'scheduled' } = body
+
+    const { data: interview, error } = await supabase
       .from('interviews')
-      .insert(body)
+      .insert([{
+        candidate_id,
+        interviewer_id,
+        scheduled_time,
+        status
+      }])
       .select()
+      .single()
 
     if (error) {
       return new Response(
@@ -195,7 +227,7 @@ async function handleInterviews(req: Request, supabase: any) {
     }
 
     return new Response(
-      JSON.stringify(data[0]),
+      JSON.stringify(interview),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 201 
@@ -204,23 +236,21 @@ async function handleInterviews(req: Request, supabase: any) {
   }
 
   return new Response(
-    JSON.stringify({ error: 'Method not allowed' }),
+    JSON.stringify({ error: 'Interview route not found' }),
     { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 405 
+      status: 404 
     }
   )
 }
 
-// User handlers
-async function handleUsers(req: Request, supabase: any) {
-  const { method } = req
-
-  if (method === 'GET') {
-    // Get all users
-    const { data, error } = await supabase
+// User routes handler
+async function handleUserRoutes(req: Request, path: string, method: string) {
+  if (path === '/api/users' && method === 'GET') {
+    const { data: users, error } = await supabase
       .from('users')
       .select('*')
+      .order('created_at', { ascending: false })
 
     if (error) {
       return new Response(
@@ -233,7 +263,7 @@ async function handleUsers(req: Request, supabase: any) {
     }
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify(users),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
@@ -242,36 +272,59 @@ async function handleUsers(req: Request, supabase: any) {
   }
 
   return new Response(
-    JSON.stringify({ error: 'Method not allowed' }),
+    JSON.stringify({ error: 'User route not found' }),
     { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 405 
+      status: 404 
     }
   )
 }
 
-// Admin handlers
-async function handleAdmin(req: Request, supabase: any) {
-  // Admin-specific endpoints
+// Admin routes handler
+async function handleAdminRoutes(req: Request, path: string, method: string) {
+  if (path === '/api/admin/stats' && method === 'GET') {
+    // Get basic stats
+    const { count: totalUsers } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+
+    const { count: totalInterviews } = await supabase
+      .from('interviews')
+      .select('*', { count: 'exact', head: true })
+
+    const { count: totalCandidates } = await supabase
+      .from('candidates')
+      .select('*', { count: 'exact', head: true })
+
+    return new Response(
+      JSON.stringify({
+        totalUsers,
+        totalInterviews,
+        totalCandidates
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    )
+  }
+
   return new Response(
-    JSON.stringify({ message: 'Admin endpoint' }),
+    JSON.stringify({ error: 'Admin route not found' }),
     { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+      status: 404 
     }
   )
 }
 
-// Candidate handlers
-async function handleCandidates(req: Request, supabase: any) {
-  const { method } = req
-  const body = method !== 'GET' ? await req.json() : null
-
-  if (method === 'GET') {
-    // Get all candidates
-    const { data, error } = await supabase
+// Candidate routes handler
+async function handleCandidateRoutes(req: Request, path: string, method: string) {
+  if (path === '/api/candidates' && method === 'GET') {
+    const { data: candidates, error } = await supabase
       .from('candidates')
       .select('*')
+      .order('created_at', { ascending: false })
 
     if (error) {
       return new Response(
@@ -284,7 +337,7 @@ async function handleCandidates(req: Request, supabase: any) {
     }
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify(candidates),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
@@ -292,12 +345,21 @@ async function handleCandidates(req: Request, supabase: any) {
     )
   }
 
-  if (method === 'POST') {
-    // Create new candidate
-    const { data, error } = await supabase
+  if (path === '/api/candidates' && method === 'POST') {
+    const body = await req.json()
+    const { name, email, phone, resume_url, status = 'pending' } = body
+
+    const { data: candidate, error } = await supabase
       .from('candidates')
-      .insert(body)
+      .insert([{
+        name,
+        email,
+        phone,
+        resume_url,
+        status
+      }])
       .select()
+      .single()
 
     if (error) {
       return new Response(
@@ -310,7 +372,7 @@ async function handleCandidates(req: Request, supabase: any) {
     }
 
     return new Response(
-      JSON.stringify(data[0]),
+      JSON.stringify(candidate),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 201 
@@ -319,10 +381,10 @@ async function handleCandidates(req: Request, supabase: any) {
   }
 
   return new Response(
-    JSON.stringify({ error: 'Method not allowed' }),
+    JSON.stringify({ error: 'Candidate route not found' }),
     { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 405 
+      status: 404 
     }
   )
 } 
