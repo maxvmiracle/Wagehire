@@ -1,0 +1,9 @@
+# Supabase Configuration
+REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Frontend URL (for email links)
+REACT_APP_FRONTEND_URL=https://wagehire.vercel.app
+
+# Node Environment
+NODE_ENV=production 

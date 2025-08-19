@@ -1,111 +1,381 @@
-import axios from 'axios';
+import { supabase } from '../config/supabase';
 
-// Determine the base URL based on environment
-const getBaseURL = () => {
-  if (process.env.NODE_ENV === 'production') {
-    // In production, use the environment variable or fallback to Vercel proxy
-    return process.env.REACT_APP_API_URL || '/api';
-  }
-  // In development, use the proxy
-  return '/api';
-};
+// Supabase API service
+export const api = {
+  // Auth APIs
+  auth: {
+    // Login user
+    login: async (email, password) => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      return {
+        user: data.user,
+        session: data.session
+      };
+    },
 
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: getBaseURL(),
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+    // Register user
+    register: async (email, password, userData) => {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: userData.name,
+            role: userData.role || 'user'
+          }
+        }
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      return {
+        user: data.user,
+        session: data.session,
+        requiresVerification: !data.session // If no session, email verification is required
+      };
+    },
 
-// Add token to requests if available (except for auth endpoints)
-api.interceptors.request.use((config) => {
-  // Don't add token for authentication endpoints
-  const authEndpoints = ['/auth/login', '/auth/register', '/auth/resend-verification', '/auth/manual-verification'];
-  const isAuthEndpoint = authEndpoints.some(endpoint => config.url?.includes(endpoint));
-  
-  if (!isAuthEndpoint) {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('Adding token to request:', config.url);
-    } else {
-      console.log('No token found for request:', config.url);
+    // Logout user
+    logout: async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+
+    // Get current user
+    getCurrentUser: async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        throw new Error(error.message);
+      }
+      return user;
+    },
+
+    // Get current session
+    getCurrentSession: async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        throw new Error(error.message);
+      }
+      return session;
+    },
+
+    // Reset password
+    resetPassword: async (email) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+
+    // Update password
+    updatePassword: async (newPassword) => {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
     }
-  } else {
-    console.log('Auth endpoint - skipping token for:', config.url);
+  },
+
+  // User APIs
+  users: {
+    // Get all users
+    getAll: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Get user profile
+    getProfile: async (userId) => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Update user profile
+    updateProfile: async (userId, profileData) => {
+      const { data, error } = await supabase
+        .from('users')
+        .update(profileData)
+        .eq('id', userId)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    }
+  },
+
+  // Candidate APIs
+  candidates: {
+    // Get all candidates
+    getAll: async () => {
+      const { data, error } = await supabase
+        .from('candidates')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Get candidate by ID
+    getById: async (id) => {
+      const { data, error } = await supabase
+        .from('candidates')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Create new candidate
+    create: async (candidateData) => {
+      const { data, error } = await supabase
+        .from('candidates')
+        .insert(candidateData)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Update candidate
+    update: async (id, updateData) => {
+      const { data, error } = await supabase
+        .from('candidates')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Delete candidate
+    delete: async (id) => {
+      const { error } = await supabase
+        .from('candidates')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+    }
+  },
+
+  // Interview APIs
+  interviews: {
+    // Get all interviews with optional filters
+    getAll: async (filters = {}) => {
+      let query = supabase
+        .from('interviews')
+        .select(`
+          *,
+          candidates (id, name, email),
+          users (id, name, email)
+        `)
+        .order('scheduled_date', { ascending: true });
+
+      // Apply filters
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.candidate_id) {
+        query = query.eq('candidate_id', filters.candidate_id);
+      }
+      if (filters.interviewer_id) {
+        query = query.eq('interviewer_id', filters.interviewer_id);
+      }
+
+      const { data, error } = await query;
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Get interview by ID
+    getById: async (id) => {
+      const { data, error } = await supabase
+        .from('interviews')
+        .select(`
+          *,
+          candidates (id, name, email),
+          users (id, name, email)
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Create new interview
+    create: async (interviewData) => {
+      const { data, error } = await supabase
+        .from('interviews')
+        .insert(interviewData)
+        .select(`
+          *,
+          candidates (id, name, email),
+          users (id, name, email)
+        `)
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Update interview
+    update: async (id, updateData) => {
+      const { data, error } = await supabase
+        .from('interviews')
+        .update(updateData)
+        .eq('id', id)
+        .select(`
+          *,
+          candidates (id, name, email),
+          users (id, name, email)
+        `)
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Delete interview
+    delete: async (id) => {
+      const { error } = await supabase
+        .from('interviews')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+
+    // Submit interview feedback
+    submitFeedback: async (id, feedbackData) => {
+      const { data, error } = await supabase
+        .from('interviews')
+        .update({
+          feedback: feedbackData.feedback,
+          status: feedbackData.status || 'completed'
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    }
+  },
+
+  // Interview Submissions APIs
+  submissions: {
+    // Get submissions for an interview
+    getByInterviewId: async (interviewId) => {
+      const { data, error } = await supabase
+        .from('interview_submissions')
+        .select('*')
+        .eq('interview_id', interviewId)
+        .order('submitted_at', { ascending: false });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Create submission
+    create: async (submissionData) => {
+      const { data, error } = await supabase
+        .from('interview_submissions')
+        .insert(submissionData)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+
+    // Update submission
+    update: async (id, updateData) => {
+      const { data, error } = await supabase
+        .from('interview_submissions')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    }
   }
-  return config;
-});
-
-// Interview APIs
-export const interviewApi = {
-  // Get all interviews with optional filters
-  getAll: async (filters = {}) => {
-    const params = new URLSearchParams(filters);
-    const response = await api.get(`/interviews?${params}`);
-    return response.data;
-  },
-
-  // Get single interview by ID
-  getById: async (id) => {
-    const response = await api.get(`/interviews/${id}`);
-    return response.data;
-  },
-
-  // Create new interview
-  create: async (interviewData) => {
-    const response = await api.post('/interviews', interviewData);
-    return response.data;
-  },
-
-  // Update interview
-  update: async (id, updateData) => {
-    const response = await api.put(`/interviews/${id}`, updateData);
-    return response.data;
-  },
-
-  // Delete interview
-  delete: async (id) => {
-    const response = await api.delete(`/interviews/${id}`);
-    return response.data;
-  },
-
-  // Submit interview feedback
-  submitFeedback: async (id, feedbackData) => {
-    const response = await api.post(`/interviews/${id}/feedback`, feedbackData);
-    return response.data;
-  },
 };
 
-// Candidate APIs
-export const candidateApi = {
-  // Get all candidates
-  getAll: async () => {
-    const response = await api.get('/candidates');
-    return response.data;
-  },
-
-  // Get single candidate by ID
-  getById: async (id) => {
-    const response = await api.get(`/candidates/${id}`);
-    return response.data;
-  },
-};
-
-// User APIs
-export const userApi = {
-  // Get all users (interviewers)
-  getAll: async () => {
-    const response = await api.get('/users');
-    return response.data;
-  },
-
-  // Get current user profile
-  getProfile: async () => {
-    const response = await api.get('/users/profile');
-    return response.data;
-  },
-};
+// Legacy API exports for backward compatibility
+export const interviewApi = api.interviews;
+export const candidateApi = api.candidates;
+export const userApi = api.users;
 
 export default api; 
