@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { supabase } from '../config/supabase';
-import { getUserRole, isAdmin, isCandidate, isInterviewer } from '../config/supabase';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -15,217 +14,156 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
   // Debug logging
-  console.log('AuthContext - Initial user:', user);
+  console.log('AuthContext - Initial token:', token);
   console.log('AuthContext - Environment:', process.env.NODE_ENV);
+  console.log('AuthContext - API URL:', process.env.REACT_APP_API_URL);
 
-  // Listen for auth changes
+  // Set up api defaults
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.log('AuthContext - Set Authorization header');
+    } else {
+      delete api.defaults.headers.common['Authorization'];
+      console.log('AuthContext - Removed Authorization header');
+    }
+  }, [token]);
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('AuthContext - Auth state changed:', event, session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
+  const checkAuth = useCallback(async () => {
+    console.log('AuthContext - Checking auth, token:', !!token);
+    
+    if (!token) {
+      console.log('AuthContext - No token, setting loading to false');
       setLoading(false);
-    });
+      return;
+    }
 
-    return () => subscription.unsubscribe();
-  }, []);
+    try {
+      console.log('AuthContext - Making profile request...');
+      const response = await api.get('/auth/profile');
+      console.log('AuthContext - Profile response:', response.data);
+      setUser(response.data.user);
+    } catch (error) {
+      console.error('AuthContext - Auth check failed:', error);
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
+    } finally {
+      setLoading(false);
+      console.log('AuthContext - Auth check complete, loading set to false');
+    }
+  }, [token]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (email, password) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const response = await api.post('/auth/login', {
         email,
         password
       });
 
-      if (error) {
-        throw error;
-      }
-
+      const { token: newToken, user: userData } = response.data;
+      
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+      setUser(userData);
+      
       toast.success('Login successful!');
-      return { success: true, user: data.user, session: data.session };
+      return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
+      const message = error.response?.data?.error || 'Login failed';
       
       // Handle email verification error
-      if (error.message.includes('Email not confirmed')) {
+      if (error.response?.data?.emailNotVerified) {
         toast.error('Please verify your email address before logging in');
-        return { success: false, error: error.message, emailNotVerified: true };
+        return { success: false, error: message, emailNotVerified: true };
       }
       
-      toast.error(error.message || 'Login failed');
-      return { success: false, error: error.message };
+      toast.error(message);
+      return { success: false, error: message };
     }
   };
 
   const register = async (userData) => {
     try {
       console.log('Registration attempt with data:', userData);
+      const response = await api.post('/auth/register', userData);
+      console.log('Registration response:', response.data);
       
-      const { data, error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            name: userData.name,
-            role: userData.role || 'user'
-          }
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('Registration response:', data);
+      const { user: userInfo, emailVerificationSent, requiresVerification } = response.data;
       
-      // Check if email confirmation is required
-      if (!data.session) {
+      console.log('Registration successful, requires verification:', requiresVerification);
+      
+      if (requiresVerification) {
         toast.success('Registration successful! Please check your email to verify your account.');
         return { 
           success: true, 
           requiresVerification: true,
-          emailVerificationSent: true,
-          user: data.user
+          emailVerificationSent,
+          user: userInfo
         };
       }
       
-      // User is automatically signed in
+      // This should not happen with the new flow, but keeping for safety
       toast.success('Registration successful! Welcome to Wagehire!');
-      return { success: true, user: data.user, session: data.session };
+      return { success: true };
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error(error.message || 'Registration failed');
-      return { success: false, error: error.message };
+      console.error('Error response:', error.response);
+      const message = error.response?.data?.error || 'Registration failed';
+      toast.error(message);
+      return { success: false, error: message };
     }
   };
 
-  const logout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-      toast.success('Logged out successfully');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Logout failed');
-    }
+  const logout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    toast.success('Logged out successfully');
   };
 
   const updateProfile = async (profileData) => {
     try {
       console.log('AuthContext: Updating profile with data:', profileData);
-      
-      // Update user metadata
-      const { data, error } = await supabase.auth.updateUser({
-        data: profileData
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('AuthContext: Profile update response:', data);
-      setUser(data.user);
+      const response = await api.put('/users/me', profileData);
+      console.log('AuthContext: Profile update response:', response.data);
+      setUser(response.data.user);
       toast.success('Profile updated successfully!');
-      return { success: true, user: data.user };
+      return { success: true };
     } catch (error) {
       console.error('AuthContext: Profile update error:', error);
-      toast.error(error.message || 'Profile update failed');
-      return { success: false, error: error.message };
+      console.error('AuthContext: Error response:', error.response);
+      const message = error.response?.data?.error || 'Profile update failed';
+      toast.error(message);
+      return { success: false, error: message };
     }
-  };
-
-  const resetPassword = async (email) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success('Password reset email sent!');
-      return { success: true };
-    } catch (error) {
-      console.error('Password reset error:', error);
-      toast.error(error.message || 'Password reset failed');
-      return { success: false, error: error.message };
-    }
-  };
-
-  const updatePassword = async (newPassword) => {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success('Password updated successfully!');
-      return { success: true };
-    } catch (error) {
-      console.error('Password update error:', error);
-      toast.error(error.message || 'Password update failed');
-      return { success: false, error: error.message };
-    }
-  };
-
-  // Helper functions for user roles
-  const getUserRoleHelper = () => {
-    return getUserRole(user);
-  };
-
-  const isAdminHelper = () => {
-    return isAdmin(user);
-  };
-
-  const isCandidateHelper = () => {
-    return isCandidate(user);
-  };
-
-  const isInterviewerHelper = () => {
-    return isInterviewer(user);
   };
 
   const value = {
     user,
-    session,
+    token,
     loading,
     login,
     register,
     logout,
     updateProfile,
-    resetPassword,
-    updatePassword,
     isAuthenticated: !!user,
     // Role-based helper functions
-    isAdmin: isAdminHelper,
-    isCandidate: isCandidateHelper,
-    isInterviewer: isInterviewerHelper,
-    getUserRole: getUserRoleHelper,
-    hasRole: (role) => getUserRole(user) === role,
+    isAdmin: () => user?.role === 'admin',
+    isCandidate: () => user?.role === 'candidate',
+    hasRole: (role) => user?.role === role,
     // Permission helper functions
-    canManageAllCandidates: () => isAdmin(user),
-    canManageAllUsers: () => isAdmin(user),
-    canManageAllInterviews: () => isAdmin(user),
+    canManageAllCandidates: () => user?.role === 'admin',
+    canManageAllUsers: () => user?.role === 'admin',
+    canManageAllInterviews: () => user?.role === 'admin',
     canManageOwnProfile: () => !!user, // All authenticated users can manage their own profile
     canScheduleInterviews: () => !!user, // All authenticated users can schedule interviews
   };

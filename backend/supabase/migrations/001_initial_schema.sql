@@ -1,5 +1,5 @@
 -- Enable Row Level Security
--- Note: Supabase handles JWT secrets automatically, no need to set app.jwt_secret
+ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-super-secret-jwt-key-here';
 
 -- Create users table (extends Supabase auth.users)
 CREATE TABLE IF NOT EXISTS public.users (
