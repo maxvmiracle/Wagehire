@@ -2,12 +2,8 @@ import axios from 'axios';
 
 // Determine the base URL based on environment
 const getBaseURL = () => {
-  if (process.env.NODE_ENV === 'production') {
-    // In production, use the environment variable or fallback to Vercel proxy
-    return process.env.REACT_APP_API_URL || '/api';
-  }
-  // In development, use the proxy
-  return '/api';
+  // Use Supabase API URL if available, otherwise fallback to proxy
+  return process.env.REACT_APP_API_BASE_URL || '/api';
 };
 
 // Create axios instance with default config
