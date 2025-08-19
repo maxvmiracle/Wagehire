@@ -73,8 +73,12 @@ export const api = {
 
     // Reset password
     resetPassword: async (email) => {
+      const redirectUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://wagehire.vercel.app/reset-password'
+        : `${window.location.origin}/reset-password`;
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: redirectUrl
       });
       if (error) {
         throw new Error(error.message);
