@@ -10,6 +10,12 @@ const corsHeaders = {
 const JWT_SECRET = Deno.env.get('JWT_SECRET') || 'your-secret-key';
 
 // Utility functions
+function extractUserToken(headers: any): string | null {
+  // Check for user token in custom header
+  const userToken = headers['x-user-token'] || headers['X-User-Token'];
+  return userToken || null;
+}
+
 function validateStrongPassword(password: string) {
   const errors: string[] = [];
   
@@ -557,9 +563,9 @@ async function handleResetPassword(body: any, supabase: any) {
 
 async function handleGetInterviews(headers: any, supabase: any) {
   try {
-    // Get user from token (simplified - in production, verify JWT)
-    const authHeader = headers.authorization;
-    if (!authHeader) {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
       return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         { 

@@ -18,23 +18,29 @@ const api = axios.create({
   },
 });
 
-// Add token to requests if available (except for auth endpoints)
+// Add authorization headers to all requests
 api.interceptors.request.use((config) => {
-  // Don't add token for authentication endpoints
+  // Always add Supabase anon key for Edge Function access
+  const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6bmRrZHFsc2xsd3l5Z2JuaWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MDc2ODMsImV4cCI6MjA3MTI4MzY4M30.hW0GaAfwNUgsR9_JFgqfi96yP-odqqBc7T6Q2OpxTJQ';
+  config.headers.Authorization = `Bearer ${supabaseAnonKey}`;
+  
+  // For authenticated endpoints, add user JWT token as well
   const authEndpoints = ['/auth/login', '/auth/register', '/auth/resend-verification', '/auth/manual-verification'];
   const isAuthEndpoint = authEndpoints.some(endpoint => config.url?.includes(endpoint));
   
   if (!isAuthEndpoint) {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('Adding token to request:', config.url);
+    const userToken = localStorage.getItem('token');
+    if (userToken) {
+      // For non-auth endpoints, we can add user token in a custom header
+      config.headers['X-User-Token'] = userToken;
+      console.log('Adding user token to request:', config.url);
     } else {
-      console.log('No token found for request:', config.url);
+      console.log('No user token found for request:', config.url);
     }
   } else {
-    console.log('Auth endpoint - skipping token for:', config.url);
+    console.log('Auth endpoint - using Supabase anon key only:', config.url);
   }
+  
   return config;
 });
 

@@ -1,6 +1,6 @@
 const https = require('https');
 
-function testEndpoint(path, method = 'GET', data = null, description = '') {
+function testEndpoint(path, method = 'GET', data = null, description = '', userToken = null) {
   const options = {
     hostname: 'xzndkdqlsllwyygbniht.supabase.co',
     port: 443,
@@ -11,6 +11,11 @@ function testEndpoint(path, method = 'GET', data = null, description = '') {
       'Content-Type': 'application/json'
     }
   };
+
+  // Add user token for authenticated endpoints
+  if (userToken) {
+    options.headers['X-User-Token'] = userToken;
+  }
 
   console.log(`\n🧪 Testing: ${description || `${method} ${path}`}`);
   console.log(`   URL: https://xzndkdqlsllwyygbniht.supabase.co${options.path}`);
@@ -64,10 +69,28 @@ async function runAllTests() {
   // Test 1: Health Check
   results.push(await testEndpoint('/health', 'GET', null, 'Health Check'));
 
-  // Test 2: Get Interviews (should be empty initially)
-  results.push(await testEndpoint('/interviews', 'GET', null, 'Get All Interviews'));
+  // Test 2: Login to get user token
+  const loginData = {
+    email: 'test@example.com',
+    password: 'TestPass123!'
+  };
+  const loginResult = await testEndpoint('/auth/login', 'POST', loginData, 'Login to get token');
+  results.push(loginResult);
 
-  // Test 3: Create Interview
+  // Extract user token from login response
+  let userToken = null;
+  try {
+    const loginResponse = JSON.parse(loginResult.data);
+    userToken = loginResponse.token;
+    console.log(`   Extracted user token: ${userToken ? 'Success' : 'Failed'}`);
+  } catch (e) {
+    console.log('   Could not extract user token from login response');
+  }
+
+  // Test 3: Get Interviews (should be empty initially)
+  results.push(await testEndpoint('/interviews', 'GET', null, 'Get All Interviews', userToken));
+
+  // Test 4: Create Interview
   const interviewData = {
     candidate_id: '7d1b3d21-ea03-4132-812f-721fb4313c00',
     company_name: 'Google',
@@ -85,7 +108,7 @@ async function runAllTests() {
     interviewer_position: 'Senior Engineer'
   };
   
-  const createResult = await testEndpoint('/interviews', 'POST', interviewData, 'Create Interview');
+  const createResult = await testEndpoint('/interviews', 'POST', interviewData, 'Create Interview', userToken);
   results.push(createResult);
 
   // Extract interview ID from response
@@ -97,42 +120,42 @@ async function runAllTests() {
     console.log('   Could not extract interview ID');
   }
 
-  // Test 4: Get Specific Interview
+  // Test 5: Get Specific Interview
   if (interviewId) {
-    results.push(await testEndpoint(`/interviews/${interviewId}`, 'GET', null, 'Get Specific Interview'));
+    results.push(await testEndpoint(`/interviews/${interviewId}`, 'GET', null, 'Get Specific Interview', userToken));
   }
 
-  // Test 5: Update Interview
+  // Test 6: Update Interview
   if (interviewId) {
     const updateData = {
       status: 'completed',
       notes: 'Interview completed successfully. Candidate performed well.'
     };
-    results.push(await testEndpoint(`/interviews/${interviewId}`, 'PUT', updateData, 'Update Interview'));
+    results.push(await testEndpoint(`/interviews/${interviewId}`, 'PUT', updateData, 'Update Interview', userToken));
   }
 
-  // Test 6: Get Profile
-  results.push(await testEndpoint('/users/profile', 'GET', null, 'Get User Profile'));
+  // Test 7: Get Profile
+  results.push(await testEndpoint('/users/profile', 'GET', null, 'Get User Profile', userToken));
 
-  // Test 7: Update Profile
+  // Test 8: Update Profile
   const profileUpdateData = {
     id: '7d1b3d21-ea03-4132-812f-721fb4313c00',
     current_position: 'Senior Software Engineer',
     experience_years: 5,
     skills: 'JavaScript, React, Node.js, TypeScript, AWS'
   };
-  results.push(await testEndpoint('/users/profile', 'PUT', profileUpdateData, 'Update User Profile'));
+  results.push(await testEndpoint('/users/profile', 'PUT', profileUpdateData, 'Update User Profile', userToken));
 
-  // Test 8: Get Interviews Again (should show the created interview)
-  results.push(await testEndpoint('/interviews', 'GET', null, 'Get All Interviews (After Creation)'));
+  // Test 9: Get Interviews Again (should show the created interview)
+  results.push(await testEndpoint('/interviews', 'GET', null, 'Get All Interviews (After Creation)', userToken));
 
-  // Test 9: Delete Interview
+  // Test 10: Delete Interview
   if (interviewId) {
-    results.push(await testEndpoint(`/interviews/${interviewId}`, 'DELETE', null, 'Delete Interview'));
+    results.push(await testEndpoint(`/interviews/${interviewId}`, 'DELETE', null, 'Delete Interview', userToken));
   }
 
-  // Test 10: Get Interviews Final (should be empty again)
-  results.push(await testEndpoint('/interviews', 'GET', null, 'Get All Interviews (After Deletion)'));
+  // Test 11: Get Interviews Final (should be empty again)
+  results.push(await testEndpoint('/interviews', 'GET', null, 'Get All Interviews (After Deletion)', userToken));
 
   // Summary
   console.log('\n📊 Test Results Summary');

@@ -7,7 +7,7 @@ const config = {
   anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6bmRrZHFsc2xsd3l5Z2JuaWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MDc2ODMsImV4cCI6MjA3MTI4MzY4M30.hW0GaAfwNUgsR9_JFgqfi96yP-odqqBc7T6Q2OpxTJQ'
 };
 
-function testEndpoint(path, method = 'GET', data = null, description = '') {
+function testEndpoint(path, method = 'GET', data = null, description = '', userToken = null) {
   const options = {
     hostname: 'xzndkdqlsllwyygbniht.supabase.co',
     port: 443,
@@ -18,6 +18,11 @@ function testEndpoint(path, method = 'GET', data = null, description = '') {
       'Content-Type': 'application/json'
     }
   };
+
+  // Add user token for authenticated endpoints
+  if (userToken) {
+    options.headers['X-User-Token'] = userToken;
+  }
 
   console.log(`\n🧪 Testing: ${description || `${method} ${path}`}`);
   console.log(`   URL: ${config.apiBaseUrl}${path}`);
@@ -105,7 +110,7 @@ async function runFrontendIntegrationTests() {
 
   // Test 4: Get user profile (if we have a token)
   if (token) {
-    results.push(await testEndpoint('/users/profile', 'GET', null, 'Get User Profile'));
+    results.push(await testEndpoint('/users/profile', 'GET', null, 'Get User Profile', token));
   }
 
   // Test 5: Create an interview (if we have a token)
@@ -127,11 +132,11 @@ async function runFrontendIntegrationTests() {
       interviewer_position: 'Senior Developer'
     };
     
-    results.push(await testEndpoint('/interviews', 'POST', interviewData, 'Create Test Interview'));
+    results.push(await testEndpoint('/interviews', 'POST', interviewData, 'Create Test Interview', token));
   }
 
   // Test 6: Get interviews
-  results.push(await testEndpoint('/interviews', 'GET', null, 'Get All Interviews'));
+  results.push(await testEndpoint('/interviews', 'GET', null, 'Get All Interviews', token));
 
   // Summary
   console.log('\n📊 Frontend Integration Test Results');
