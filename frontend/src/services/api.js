@@ -2,8 +2,12 @@ import axios from 'axios';
 
 // Determine the base URL based on environment
 const getBaseURL = () => {
-  // Use Supabase API URL if available, otherwise fallback to proxy
-  return process.env.REACT_APP_API_BASE_URL || '/api';
+  if (process.env.NODE_ENV === 'production') {
+    // In production, use the Supabase API URL
+    return process.env.REACT_APP_API_BASE_URL || 'https://xzndkdqlsllwyygbniht.supabase.co/functions/v1/api';
+  }
+  // In development, use the Supabase API URL
+  return process.env.REACT_APP_API_BASE_URL || 'https://xzndkdqlsllwyygbniht.supabase.co/functions/v1/api';
 };
 
 // Create axios instance with default config
@@ -33,6 +37,39 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Authentication APIs
+export const authApi = {
+  // Register new user
+  register: async (userData) => {
+    const response = await api.post('/auth/register', userData);
+    return response.data;
+  },
+
+  // Login user
+  login: async (credentials) => {
+    const response = await api.post('/auth/login', credentials);
+    return response.data;
+  },
+
+  // Verify email
+  verifyEmail: async (token) => {
+    const response = await api.post('/auth/verify-email', { token });
+    return response.data;
+  },
+
+  // Forgot password
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  // Reset password
+  resetPassword: async (token, newPassword) => {
+    const response = await api.post('/auth/reset-password', { token, newPassword });
+    return response.data;
+  },
+};
 
 // Interview APIs
 export const interviewApi = {
@@ -87,6 +124,24 @@ export const candidateApi = {
     const response = await api.get(`/candidates/${id}`);
     return response.data;
   },
+
+  // Create new candidate
+  create: async (candidateData) => {
+    const response = await api.post('/candidates', candidateData);
+    return response.data;
+  },
+
+  // Update candidate
+  update: async (id, updateData) => {
+    const response = await api.put(`/candidates/${id}`, updateData);
+    return response.data;
+  },
+
+  // Delete candidate
+  delete: async (id) => {
+    const response = await api.delete(`/candidates/${id}`);
+    return response.data;
+  },
 };
 
 // User APIs
@@ -100,6 +155,21 @@ export const userApi = {
   // Get current user profile
   getProfile: async () => {
     const response = await api.get('/users/profile');
+    return response.data;
+  },
+
+  // Update user profile
+  updateProfile: async (profileData) => {
+    const response = await api.put('/users/profile', profileData);
+    return response.data;
+  },
+};
+
+// Health check API
+export const healthApi = {
+  // Check API health
+  check: async () => {
+    const response = await api.get('/health');
     return response.data;
   },
 };

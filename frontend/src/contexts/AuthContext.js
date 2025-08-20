@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import api from '../services/api';
+import { authApi, userApi } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -20,18 +20,7 @@ export const AuthProvider = ({ children }) => {
   // Debug logging
   console.log('AuthContext - Initial token:', token);
   console.log('AuthContext - Environment:', process.env.NODE_ENV);
-  console.log('AuthContext - API URL:', process.env.REACT_APP_API_URL);
-
-  // Set up api defaults
-  useEffect(() => {
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      console.log('AuthContext - Set Authorization header');
-    } else {
-      delete api.defaults.headers.common['Authorization'];
-      console.log('AuthContext - Removed Authorization header');
-    }
-  }, [token]);
+  console.log('AuthContext - API URL:', process.env.REACT_APP_API_BASE_URL);
 
   const checkAuth = useCallback(async () => {
     console.log('AuthContext - Checking auth, token:', !!token);
@@ -44,9 +33,9 @@ export const AuthProvider = ({ children }) => {
 
     try {
       console.log('AuthContext - Making profile request...');
-      const response = await api.get('/auth/profile');
-      console.log('AuthContext - Profile response:', response.data);
-      setUser(response.data.user);
+      const response = await userApi.getProfile();
+      console.log('AuthContext - Profile response:', response);
+      setUser(response.user);
     } catch (error) {
       console.error('AuthContext - Auth check failed:', error);
       localStorage.removeItem('token');
@@ -64,12 +53,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', {
+      const response = await authApi.login({
         email,
         password
       });
 
-      const { token: newToken, user: userData } = response.data;
+      const { token: newToken, user: userData } = response;
       
       localStorage.setItem('token', newToken);
       setToken(newToken);
@@ -78,13 +67,7 @@ export const AuthProvider = ({ children }) => {
       toast.success('Login successful!');
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.error || 'Login failed';
-      
-      // Handle email verification error
-      if (error.response?.data?.emailNotVerified) {
-        toast.error('Please verify your email address before logging in');
-        return { success: false, error: message, emailNotVerified: true };
-      }
+      const message = error.message || 'Login failed';
       
       toast.error(message);
       return { success: false, error: message };
@@ -94,10 +77,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       console.log('Registration attempt with data:', userData);
-      const response = await api.post('/auth/register', userData);
-      console.log('Registration response:', response.data);
+      const response = await authApi.register(userData);
+      console.log('Registration response:', response);
       
-      const { user: userInfo, emailVerificationSent, requiresVerification } = response.data;
+      const { user: userInfo, emailVerificationSent, requiresVerification } = response;
       
       console.log('Registration successful, requires verification:', requiresVerification);
       
@@ -116,8 +99,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       console.error('Registration error:', error);
-      console.error('Error response:', error.response);
-      const message = error.response?.data?.error || 'Registration failed';
+      const message = error.message || 'Registration failed';
       toast.error(message);
       return { success: false, error: message };
     }
@@ -133,15 +115,14 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (profileData) => {
     try {
       console.log('AuthContext: Updating profile with data:', profileData);
-      const response = await api.put('/users/me', profileData);
-      console.log('AuthContext: Profile update response:', response.data);
-      setUser(response.data.user);
+      const response = await userApi.updateProfile(profileData);
+      console.log('AuthContext: Profile update response:', response);
+      setUser(response.user);
       toast.success('Profile updated successfully!');
       return { success: true };
     } catch (error) {
       console.error('AuthContext: Profile update error:', error);
-      console.error('AuthContext: Error response:', error.response);
-      const message = error.response?.data?.error || 'Profile update failed';
+      const message = error.message || 'Profile update failed';
       toast.error(message);
       return { success: false, error: message };
     }

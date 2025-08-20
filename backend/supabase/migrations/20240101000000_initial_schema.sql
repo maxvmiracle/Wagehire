@@ -1,156 +1,97 @@
--- Enable UUID extension
+-- Enable UUID extension for better ID generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create users table (extends Supabase auth.users)
-CREATE TABLE IF NOT EXISTS public.users (
-    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    name TEXT,
-    role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin', 'interviewer')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- Create users table (candidates) with updated role system
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'candidate',
+  phone TEXT,
+  resume_url TEXT,
+  current_position TEXT,
+  experience_years INTEGER,
+  skills TEXT,
+  email_verified BOOLEAN DEFAULT FALSE,
+  email_verification_token TEXT,
+  email_verification_expires TIMESTAMP WITH TIME ZONE,
+  password_reset_token TEXT,
+  password_reset_expires TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create interviews table for candidate's interview schedules
+CREATE TABLE IF NOT EXISTS interviews (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  candidate_id UUID NOT NULL,
+  company_name TEXT NOT NULL,
+  job_title TEXT NOT NULL,
+  scheduled_date TIMESTAMP WITH TIME ZONE,
+  duration INTEGER DEFAULT 60,
+  status TEXT DEFAULT 'scheduled',
+  round INTEGER DEFAULT 1,
+  interview_type TEXT DEFAULT 'technical',
+  location TEXT,
+  notes TEXT,
+  company_website TEXT,
+  company_linkedin_url TEXT,
+  other_urls TEXT,
+  job_description TEXT,
+  salary_range TEXT,
+  interviewer_name TEXT,
+  interviewer_email TEXT,
+  interviewer_position TEXT,
+  interviewer_linkedin_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  FOREIGN KEY (candidate_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 -- Create candidates table
-CREATE TABLE IF NOT EXISTS public.candidates (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    phone TEXT,
-    resume_url TEXT,
-    linkedin_url TEXT,
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'shortlisted', 'rejected', 'hired')),
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS candidates (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  phone TEXT,
+  resume_url TEXT,
+  notes TEXT,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- Create interviews table
-CREATE TABLE IF NOT EXISTS public.interviews (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    candidate_id UUID REFERENCES public.candidates(id) ON DELETE CASCADE,
-    interviewer_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-    scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    duration_minutes INTEGER DEFAULT 60,
-    status TEXT DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled', 'no_show')),
-    feedback TEXT,
-    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- Create interview_feedback table for candidate's interview feedback
+CREATE TABLE IF NOT EXISTS interview_feedback (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  interview_id UUID NOT NULL,
+  candidate_id UUID NOT NULL,
+  technical_skills INTEGER,
+  communication_skills INTEGER,
+  problem_solving INTEGER,
+  cultural_fit INTEGER,
+  overall_rating INTEGER,
+  feedback_text TEXT,
+  recommendation TEXT,
+  received_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  FOREIGN KEY (interview_id) REFERENCES interviews (id) ON DELETE CASCADE,
+  FOREIGN KEY (candidate_id) REFERENCES users (id) ON DELETE CASCADE
 );
-
--- Create interview_questions table
-CREATE TABLE IF NOT EXISTS public.interview_questions (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    interview_id UUID REFERENCES public.interviews(id) ON DELETE CASCADE,
-    question TEXT NOT NULL,
-    answer TEXT,
-    question_type TEXT DEFAULT 'general' CHECK (question_type IN ('general', 'technical', 'behavioral')),
-    order_index INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create notifications table
-CREATE TABLE IF NOT EXISTS public.notifications (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    message TEXT NOT NULL,
-    type TEXT DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error')),
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create RLS (Row Level Security) policies
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.candidates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.interviews ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.interview_questions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-
--- Users policies
-CREATE POLICY "Users can view their own profile" ON public.users
-    FOR SELECT USING (auth.uid() = id);
-
-CREATE POLICY "Admins can view all users" ON public.users
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
-
--- Candidates policies
-CREATE POLICY "All authenticated users can view candidates" ON public.candidates
-    FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Admins and interviewers can manage candidates" ON public.candidates
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE id = auth.uid() AND role IN ('admin', 'interviewer')
-        )
-    );
-
--- Interviews policies
-CREATE POLICY "Users can view interviews they're involved in" ON public.interviews
-    FOR SELECT USING (
-        auth.uid() = interviewer_id OR
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
-
-CREATE POLICY "Admins and interviewers can manage interviews" ON public.interviews
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE id = auth.uid() AND role IN ('admin', 'interviewer')
-        )
-    );
-
--- Interview questions policies
-CREATE POLICY "Users can view questions for their interviews" ON public.interview_questions
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.interviews 
-            WHERE id = interview_id AND interviewer_id = auth.uid()
-        ) OR
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
-
-CREATE POLICY "Admins and interviewers can manage questions" ON public.interview_questions
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE id = auth.uid() AND role IN ('admin', 'interviewer')
-        )
-    );
-
--- Notifications policies
-CREATE POLICY "Users can view their own notifications" ON public.notifications
-    FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can update their own notifications" ON public.notifications
-    FOR UPDATE USING (auth.uid() = user_id);
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
-CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
-CREATE INDEX IF NOT EXISTS idx_candidates_email ON public.candidates(email);
-CREATE INDEX IF NOT EXISTS idx_candidates_status ON public.candidates(status);
-CREATE INDEX IF NOT EXISTS idx_interviews_candidate_id ON public.interviews(candidate_id);
-CREATE INDEX IF NOT EXISTS idx_interviews_interviewer_id ON public.interviews(interviewer_id);
-CREATE INDEX IF NOT EXISTS idx_interviews_scheduled_time ON public.interviews(scheduled_time);
-CREATE INDEX IF NOT EXISTS idx_interviews_status ON public.interviews(status);
-CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON public.notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_interviews_candidate_id ON interviews(candidate_id);
+CREATE INDEX IF NOT EXISTS idx_interviews_status ON interviews(status);
+CREATE INDEX IF NOT EXISTS idx_interviews_scheduled_date ON interviews(scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_candidates_user_id ON candidates(user_id);
+CREATE INDEX IF NOT EXISTS idx_interview_feedback_interview_id ON interview_feedback(interview_id);
+CREATE INDEX IF NOT EXISTS idx_interview_feedback_candidate_id ON interview_feedback(candidate_id);
 
--- Create functions for automatic timestamp updates
+-- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -159,32 +100,39 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create triggers for automatic timestamp updates
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Create triggers for updated_at
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_interviews_updated_at BEFORE UPDATE ON interviews FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_candidates_updated_at BEFORE UPDATE ON candidates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_candidates_updated_at BEFORE UPDATE ON public.candidates
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Enable Row Level Security (RLS)
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE interviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE candidates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE interview_feedback ENABLE ROW LEVEL SECURITY;
 
-CREATE TRIGGER update_interviews_updated_at BEFORE UPDATE ON public.interviews
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Create RLS policies
+-- Users can read their own data
+CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (auth.uid()::text = id::text);
 
--- Create function to handle new user creation
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO public.users (id, email, name, role)
-    VALUES (
-        NEW.id,
-        NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'name', ''),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'user')
-    );
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Users can update their own data
+CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid()::text = id::text);
 
--- Create trigger for new user creation
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user(); 
+-- Users can insert their own data
+CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid()::text = id::text);
+
+-- Interviews policies
+CREATE POLICY "Users can view own interviews" ON interviews FOR SELECT USING (candidate_id::text = auth.uid()::text);
+CREATE POLICY "Users can insert own interviews" ON interviews FOR INSERT WITH CHECK (candidate_id::text = auth.uid()::text);
+CREATE POLICY "Users can update own interviews" ON interviews FOR UPDATE USING (candidate_id::text = auth.uid()::text);
+CREATE POLICY "Users can delete own interviews" ON interviews FOR DELETE USING (candidate_id::text = auth.uid()::text);
+
+-- Candidates policies (for admin access)
+CREATE POLICY "Users can view own candidate profile" ON candidates FOR SELECT USING (user_id::text = auth.uid()::text);
+CREATE POLICY "Users can update own candidate profile" ON candidates FOR UPDATE USING (user_id::text = auth.uid()::text);
+CREATE POLICY "Users can insert own candidate profile" ON candidates FOR INSERT WITH CHECK (user_id::text = auth.uid()::text);
+
+-- Interview feedback policies
+CREATE POLICY "Users can view own interview feedback" ON interview_feedback FOR SELECT USING (candidate_id::text = auth.uid()::text);
+CREATE POLICY "Users can insert own interview feedback" ON interview_feedback FOR INSERT WITH CHECK (candidate_id::text = auth.uid()::text);
+CREATE POLICY "Users can update own interview feedback" ON interview_feedback FOR UPDATE USING (candidate_id::text = auth.uid()::text); 
