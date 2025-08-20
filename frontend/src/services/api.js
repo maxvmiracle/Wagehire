@@ -149,8 +149,17 @@ export const interviewApi = {
 
   // Delete interview
   delete: async (id) => {
-    const response = await api.delete(`/interviews/${id}`);
-    return response.data;
+    try {
+      console.log('API: Deleting interview with ID:', id);
+      const response = await api.delete(`/interviews/${id}`);
+      console.log('API: Interview deletion successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('API: Interview deletion failed:', error);
+      console.error('API: Error response:', error.response?.data);
+      console.error('API: Error status:', error.response?.status);
+      throw error;
+    }
   },
 
   // Submit interview feedback

@@ -127,7 +127,10 @@ serve(async (req) => {
     let body = null;
     
     try {
-      body = method !== 'GET' ? await req.json() : null;
+      // Only parse JSON for POST, PUT, PATCH requests (not GET, DELETE, OPTIONS)
+      if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+        body = await req.json();
+      }
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
       return new Response(
@@ -1129,6 +1132,46 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
 
 async function handleDeleteInterview(id: string, headers: any, supabase: any) {
   try {
+    console.log('=== DELETE INTERVIEW DEBUG ===');
+    console.log('Interview ID:', id);
+    console.log('Headers:', JSON.stringify(headers, null, 2));
+
+    // Validate required fields
+    if (!id) {
+      return new Response(
+        JSON.stringify({ error: 'Interview ID is required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Check if interview exists
+    const { data: existingInterview, error: checkError } = await supabase
+      .from('interviews')
+      .select('id, candidate_id')
+      .eq('id', id)
+      .single();
+
+    if (checkError || !existingInterview) {
+      console.error('Interview not found:', checkError);
+      return new Response(
+        JSON.stringify({ error: 'Interview not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    console.log('Interview found, proceeding with deletion...');
+
+    // Optional: Check if user has permission to delete this interview
+    // For now, we'll allow deletion if the interview exists
+    // In a production system, you might want to check if the user owns the interview
+
+    // Delete the interview
     const { error } = await supabase
       .from('interviews')
       .delete()
@@ -1137,7 +1180,11 @@ async function handleDeleteInterview(id: string, headers: any, supabase: any) {
     if (error) {
       console.error('Delete interview error:', error);
       return new Response(
-        JSON.stringify({ error: 'Failed to delete interview' }),
+        JSON.stringify({ 
+          error: 'Failed to delete interview',
+          details: error.message,
+          code: error.code
+        }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
@@ -1145,9 +1192,12 @@ async function handleDeleteInterview(id: string, headers: any, supabase: any) {
       );
     }
 
+    console.log('Interview deleted successfully');
+
     return new Response(
       JSON.stringify({
-        message: 'Interview deleted successfully'
+        message: 'Interview deleted successfully',
+        deletedId: id
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1158,7 +1208,11 @@ async function handleDeleteInterview(id: string, headers: any, supabase: any) {
   } catch (error) {
     console.error('Delete interview error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        message: error.message,
+        stack: error.stack
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
