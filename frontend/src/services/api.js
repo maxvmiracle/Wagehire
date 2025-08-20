@@ -133,8 +133,18 @@ export const interviewApi = {
 
   // Update interview
   update: async (id, updateData) => {
-    const response = await api.put(`/interviews/${id}`, updateData);
-    return response.data;
+    try {
+      console.log('API: Updating interview with ID:', id);
+      console.log('API: Update data:', updateData);
+      const response = await api.put(`/interviews/${id}`, updateData);
+      console.log('API: Interview update successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('API: Interview update failed:', error);
+      console.error('API: Error response:', error.response?.data);
+      console.error('API: Error status:', error.response?.status);
+      throw error;
+    }
   },
 
   // Delete interview

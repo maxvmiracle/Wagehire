@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import api from '../services/api';
+import { interviewApi } from '../services/api';
 import LoadingScreen from '../components/LoadingScreen';
 import { 
   Calendar, Clock, MapPin, Building, FileText, AlertCircle, 
@@ -41,8 +41,8 @@ const EditInterview = () => {
   const fetchInterview = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/interviews/${id}`);
-      const interview = response.data.interview;
+      const response = await interviewApi.getById(id);
+      const interview = response.interview;
       
       // Convert the scheduled_date to separate date and time
       let dateStr = '';
@@ -225,7 +225,7 @@ const EditInterview = () => {
         scheduledDateTime = new Date().toISOString();
       }
       
-      await api.put(`/interviews/${id}`, {
+      await interviewApi.update(id, {
         ...formData,
         scheduled_date: scheduledDateTime,
         interview_type: formData.interview_type,

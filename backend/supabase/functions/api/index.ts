@@ -855,6 +855,43 @@ async function handleGetInterview(id: string, headers: any, supabase: any) {
 
 async function handleUpdateInterview(id: string, body: any, headers: any, supabase: any) {
   try {
+    console.log('=== UPDATE INTERVIEW DEBUG ===');
+    console.log('Interview ID:', id);
+    console.log('Update data:', JSON.stringify(body, null, 2));
+    console.log('Headers:', JSON.stringify(headers, null, 2));
+
+    // Validate required fields
+    if (!id) {
+      return new Response(
+        JSON.stringify({ error: 'Interview ID is required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Check if interview exists
+    const { data: existingInterview, error: checkError } = await supabase
+      .from('interviews')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (checkError || !existingInterview) {
+      console.error('Interview not found:', checkError);
+      return new Response(
+        JSON.stringify({ error: 'Interview not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    console.log('Interview found, proceeding with update...');
+
+    // Update the interview
     const { data: interview, error } = await supabase
       .from('interviews')
       .update(body)
@@ -865,13 +902,19 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
     if (error) {
       console.error('Update interview error:', error);
       return new Response(
-        JSON.stringify({ error: 'Failed to update interview' }),
+        JSON.stringify({ 
+          error: 'Failed to update interview',
+          details: error.message,
+          code: error.code
+        }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
         }
       );
     }
+
+    console.log('Interview updated successfully:', interview);
 
     return new Response(
       JSON.stringify({
@@ -887,7 +930,11 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
   } catch (error) {
     console.error('Update interview error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        message: error.message,
+        stack: error.stack
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
