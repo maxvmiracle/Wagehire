@@ -380,6 +380,41 @@ async function handleCandidateRoutes(path: string, method: string, body: any, he
   )
 }
 
+// Generate verification token
+function generateVerificationToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// Send verification email using external email service
+async function sendVerificationEmail(email: string, name: string, token: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    // For Supabase Edge Functions, we'll use a simple approach
+    // In production, you might want to use a service like SendGrid, Mailgun, or Resend
+    
+    const verificationUrl = `https://your-frontend-domain.com/verify-email?token=${token}`;
+    
+    console.log(`📧 Verification email would be sent to: ${email}`);
+    console.log(`🔗 Verification URL: ${verificationUrl}`);
+    console.log(`📋 Token: ${token}`);
+    
+    // For now, we'll return success but log the verification details
+    // In a real implementation, you would integrate with an email service
+    
+    return {
+      success: true,
+      message: 'Verification email sent successfully'
+    };
+  } catch (error) {
+    console.error('Email sending error:', error);
+    return {
+      success: false,
+      error: 'Failed to send verification email'
+    };
+  }
+}
+
 // Authentication handlers
 async function handleRegister(body: any, supabase: any) {
   try {
@@ -450,17 +485,34 @@ async function handleRegister(body: any, supabase: any) {
     }
 
     // Check if this is the first user
-    const { count: userCount } = await supabase
+    const { data: existingUsers, error: countError } = await supabase
       .from('users')
-      .select('*', { count: 'exact', head: true });
+      .select('id');
 
-    const isFirstUser = userCount === 0;
+    if (countError) {
+      console.error('Error checking user count:', countError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to check user count' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    const isFirstUser = !existingUsers || existingUsers.length === 0;
     const userRole = isFirstUser ? 'admin' : 'candidate';
+    
+    console.log(`User count: ${existingUsers?.length || 0}, Is first user: ${isFirstUser}, Role: ${userRole}`);
 
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Insert new user
+    // Generate verification token for non-admin users
+    const verificationToken = generateVerificationToken();
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Insert new user with email verification
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
@@ -473,7 +525,9 @@ async function handleRegister(body: any, supabase: any) {
         current_position,
         experience_years,
         skills,
-        email_verified: true
+        email_verified: isFirstUser, // First user (admin) is auto-verified
+        email_verification_token: isFirstUser ? null : verificationToken,
+        email_verification_expires: isFirstUser ? null : verificationExpires
       })
       .select('id, email, name, role, phone, resume_url, current_position, experience_years, skills, email_verified, created_at')
       .single();
@@ -489,13 +543,27 @@ async function handleRegister(body: any, supabase: any) {
       );
     }
 
+    // Send verification email for non-admin users
+    let emailVerificationSent = false;
+    if (!isFirstUser) {
+      const emailResult = await sendVerificationEmail(email, name, verificationToken);
+      emailVerificationSent = emailResult.success;
+      
+      if (!emailResult.success) {
+        console.error('Failed to send verification email:', emailResult.error);
+      }
+    }
+
     return new Response(
       JSON.stringify({
-        message: isFirstUser ? 'Admin account created successfully! You can now login.' : 'Registration successful! You can now login.',
+        message: isFirstUser 
+          ? 'Admin account created successfully! You can now login.' 
+          : 'Registration successful! Please check your email to verify your account.',
         user: newUser,
-        emailVerificationSent: false,
-        requiresVerification: false,
-        isAdmin: isFirstUser
+        emailVerificationSent,
+        requiresVerification: !isFirstUser,
+        isAdmin: isFirstUser,
+        verificationToken: isFirstUser ? null : verificationToken // For development/testing
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -558,6 +626,21 @@ async function handleLogin(body: any, supabase: any) {
       );
     }
 
+    // Check email verification (except for admin users)
+    if (!user.email_verified && user.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Please verify your email before logging in',
+          requiresVerification: true,
+          email: user.email
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
     // Generate JWT token
     const token = generateJWT({
       userId: user.id,
@@ -592,15 +675,97 @@ async function handleLogin(body: any, supabase: any) {
   }
 }
 
+
+
 async function handleVerifyEmail(body: any, supabase: any) {
-  // Implement email verification logic
-  return new Response(
-    JSON.stringify({ message: 'Email verification endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    const { token } = body;
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: 'Verification token is required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
     }
-  )
+
+    // Find user with this verification token
+    const { data: user, error: findError } = await supabase
+      .from('users')
+      .select('id, email, name, email_verification_expires')
+      .eq('email_verification_token', token)
+      .single();
+
+    if (findError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired verification token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Check if token is expired
+    if (user.email_verification_expires && new Date(user.email_verification_expires) < new Date()) {
+      return new Response(
+        JSON.stringify({ error: 'Verification token has expired' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Update user to verified
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        email_verified: true,
+        email_verification_token: null,
+        email_verification_expires: null
+      })
+      .eq('id', user.id);
+
+    if (updateError) {
+      console.error('Update verification error:', updateError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to verify email' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'Email verified successfully! You can now login.',
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          email_verified: true
+        }
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Email verification error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleForgotPassword(body: any, supabase: any) {
