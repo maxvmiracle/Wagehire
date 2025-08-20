@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import { interviewApi } from '../services/api';
 import notificationService from '../services/notificationService';
 import { 
   Calendar, Clock, MapPin, Building, FileText, AlertCircle, 
@@ -205,12 +205,12 @@ const ScheduleInterview = () => {
       
       console.log('Submit data:', JSON.stringify(submitData, null, 2));
       
-      const response = await api.post('/interviews', submitData);
+      const response = await interviewApi.create(submitData);
 
-      console.log('Interview scheduled successfully:', response.data);
+      console.log('Interview scheduled successfully:', response);
       
       // Show enhanced notification for scheduled interview
-      notificationService.showInterviewScheduled(response.data.interview);
+      notificationService.showInterviewScheduled(response.interview);
       
       navigate('/interviews');
     } catch (error) {

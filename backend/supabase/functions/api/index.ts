@@ -109,6 +109,11 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== REQUEST DEBUG ===');
+    console.log('Request URL:', req.url);
+    console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
+
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://xzndkdqlsllwyygbniht.supabase.co'
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6bmRrZHFsc2xsd3l5Z2JuaWh0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTcwNzY4MywiZXhwIjoyMDcxMjgzNjgzfQ.KQJrEg-zPQdgtHikT3wLO0JkQQV1kx8ngyJBAL-zS8k'
@@ -119,13 +124,27 @@ serve(async (req) => {
     const url = new URL(req.url)
     const path = url.pathname.replace('/functions/v1/api', '').replace('/api', '')
     const method = req.method
-    const body = method !== 'GET' ? await req.json() : null
+    let body = null;
+    
+    try {
+      body = method !== 'GET' ? await req.json() : null;
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+    
     const headers = Object.fromEntries(req.headers.entries())
     
     // Debug logging
-    console.log('Request URL:', req.url)
-    console.log('Path:', path)
-    console.log('Method:', method)
+    console.log('Parsed path:', path)
+    console.log('Parsed method:', method)
+    console.log('Request body:', body ? JSON.stringify(body, null, 2) : 'null')
 
     // Health check endpoint
     if (path === '/health' && method === 'GET') {
@@ -141,30 +160,36 @@ serve(async (req) => {
 
     // Auth routes
     if (path.startsWith('/auth')) {
-      return handleAuthRoutes(path, method, body, headers, supabase)
+      console.log('Handling auth route:', path);
+      return await handleAuthRoutes(path, method, body, headers, supabase)
     }
 
     // Interview routes
     if (path.startsWith('/interviews')) {
-      return handleInterviewRoutes(path, method, body, headers, supabase)
+      console.log('Handling interview route:', path);
+      return await handleInterviewRoutes(path, method, body, headers, supabase)
     }
 
     // User routes
     if (path.startsWith('/users')) {
-      return handleUserRoutes(path, method, body, headers, supabase)
+      console.log('Handling user route:', path);
+      return await handleUserRoutes(path, method, body, headers, supabase)
     }
 
     // Admin routes
     if (path.startsWith('/admin')) {
-      return handleAdminRoutes(path, method, body, headers, supabase)
+      console.log('Handling admin route:', path);
+      return await handleAdminRoutes(path, method, body, headers, supabase)
     }
 
     // Candidate routes
     if (path.startsWith('/candidates')) {
-      return handleCandidateRoutes(path, method, body, headers, supabase)
+      console.log('Handling candidate route:', path);
+      return await handleCandidateRoutes(path, method, body, headers, supabase)
     }
 
     // 404 for unknown routes
+    console.log('Route not found:', path);
     return new Response(
       JSON.stringify({ error: 'Route not found' }),
       { 
@@ -174,11 +199,16 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error:', error)
+    console.error('=== MAIN ERROR HANDLER ===');
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
     return new Response(
       JSON.stringify({ 
         error: 'Something went wrong!',
-        message: error.message 
+        message: error.message,
+        type: typeof error
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -651,6 +681,10 @@ async function handleGetInterviews(headers: any, supabase: any) {
 
 async function handleCreateInterview(body: any, headers: any, supabase: any) {
   try {
+    console.log('=== CREATE INTERVIEW DEBUG ===');
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    console.log('Headers:', JSON.stringify(headers, null, 2));
+
     const {
       candidate_id,
       company_name,
@@ -673,8 +707,20 @@ async function handleCreateInterview(body: any, headers: any, supabase: any) {
       interviewer_linkedin_url
     } = body;
 
+    console.log('Extracted data:', {
+      candidate_id,
+      company_name,
+      job_title,
+      scheduled_date,
+      duration,
+      status,
+      round,
+      interview_type
+    });
+
     // Validate required fields
     if (!candidate_id || !company_name || !job_title) {
+      console.log('Validation failed - missing required fields');
       return new Response(
         JSON.stringify({ error: 'Candidate ID, company name, and job title are required' }),
         { 
@@ -684,43 +730,55 @@ async function handleCreateInterview(body: any, headers: any, supabase: any) {
       );
     }
 
+    // Prepare insert data
+    const insertData = {
+      candidate_id,
+      company_name,
+      job_title,
+      scheduled_date,
+      duration,
+      status,
+      round,
+      interview_type,
+      location,
+      notes,
+      company_website,
+      company_linkedin_url,
+      other_urls,
+      job_description,
+      salary_range,
+      interviewer_name,
+      interviewer_email,
+      interviewer_position,
+      interviewer_linkedin_url
+    };
+
+    console.log('Insert data:', JSON.stringify(insertData, null, 2));
+
     // Insert new interview
+    console.log('Attempting to insert interview...');
     const { data: interview, error } = await supabase
       .from('interviews')
-      .insert({
-        candidate_id,
-        company_name,
-        job_title,
-        scheduled_date,
-        duration,
-        status,
-        round,
-        interview_type,
-        location,
-        notes,
-        company_website,
-        company_linkedin_url,
-        other_urls,
-        job_description,
-        salary_range,
-        interviewer_name,
-        interviewer_email,
-        interviewer_position,
-        interviewer_linkedin_url
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (error) {
       console.error('Create interview error:', error);
       return new Response(
-        JSON.stringify({ error: 'Failed to create interview' }),
+        JSON.stringify({ 
+          error: 'Failed to create interview',
+          details: error.message,
+          code: error.code
+        }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
         }
       );
     }
+
+    console.log('Interview created successfully:', interview);
 
     return new Response(
       JSON.stringify({
@@ -736,7 +794,11 @@ async function handleCreateInterview(body: any, headers: any, supabase: any) {
   } catch (error) {
     console.error('Create interview error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        message: error.message,
+        stack: error.stack
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 

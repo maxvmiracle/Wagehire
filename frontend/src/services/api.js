@@ -16,6 +16,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 second timeout
 });
 
 // Add authorization headers to all requests
@@ -43,6 +44,29 @@ api.interceptors.request.use((config) => {
   
   return config;
 });
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    
+    // Handle connection errors
+    if (error.code === 'ERR_NETWORK' || error.message.includes('ERR_CONNECTION_CLOSED')) {
+      console.error('Network error detected - connection closed or network issue');
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 // Authentication APIs
 export const authApi = {
@@ -94,8 +118,17 @@ export const interviewApi = {
 
   // Create new interview
   create: async (interviewData) => {
-    const response = await api.post('/interviews', interviewData);
-    return response.data;
+    try {
+      console.log('API: Creating interview with data:', interviewData);
+      const response = await api.post('/interviews', interviewData);
+      console.log('API: Interview creation successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('API: Interview creation failed:', error);
+      console.error('API: Error response:', error.response?.data);
+      console.error('API: Error status:', error.response?.status);
+      throw error;
+    }
   },
 
   // Update interview
