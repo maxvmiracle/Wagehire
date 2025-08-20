@@ -276,8 +276,11 @@ const EditInterview = () => {
       }
       
       // Prepare update data with status-specific handling
+      // Remove scheduled_time from the data since it's not in the database schema
+      const { scheduled_time, ...formDataWithoutTime } = formData;
+      
       const updateData = {
-        ...formData,
+        ...formDataWithoutTime,
         scheduled_date: scheduledDateTime,
         interview_type: formData.interview_type,
         duration: formData.status === 'uncertain' ? null : (formData.duration ? parseInt(formData.duration, 10) : formData.duration)

@@ -894,8 +894,26 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
     // Validate and process update data
     const updateData = { ...body };
     
+    // Remove any fields that don't exist in the database schema
+    const validFields = [
+      'candidate_id', 'company_name', 'job_title', 'scheduled_date', 'duration',
+      'status', 'round', 'interview_type', 'location', 'notes', 'company_website',
+      'company_linkedin_url', 'other_urls', 'job_description', 'salary_range',
+      'interviewer_name', 'interviewer_email', 'interviewer_position', 'interviewer_linkedin_url'
+    ];
+    
+    // Filter out invalid fields
+    const filteredUpdateData = {};
+    for (const [key, value] of Object.entries(updateData)) {
+      if (validFields.includes(key)) {
+        filteredUpdateData[key] = value;
+      } else {
+        console.log(`Filtering out invalid field: ${key}`);
+      }
+    }
+    
     // Handle status changes and related field updates
-    const newStatus = updateData.status;
+    const newStatus = filteredUpdateData.status;
     const oldStatus = existingInterview.status;
     
     console.log(`Status change: ${oldStatus} -> ${newStatus}`);
@@ -939,7 +957,7 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
     }
 
     // Validate required fields based on status
-    if (!updateData.company_name && !existingInterview.company_name) {
+    if (!filteredUpdateData.company_name && !existingInterview.company_name) {
       return new Response(
         JSON.stringify({ error: 'Company name is required' }),
         { 
@@ -949,7 +967,7 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
       );
     }
 
-    if (!updateData.job_title && !existingInterview.job_title) {
+    if (!filteredUpdateData.job_title && !existingInterview.job_title) {
       return new Response(
         JSON.stringify({ error: 'Job title is required' }),
         { 
@@ -960,8 +978,8 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
     }
 
     // Validate date format if provided
-    if (updateData.scheduled_date) {
-      const date = new Date(updateData.scheduled_date);
+    if (filteredUpdateData.scheduled_date) {
+      const date = new Date(filteredUpdateData.scheduled_date);
       if (isNaN(date.getTime())) {
         return new Response(
           JSON.stringify({ error: 'Invalid scheduled date format' }),
@@ -974,8 +992,8 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
     }
 
     // Validate duration if provided
-    if (updateData.duration !== null && updateData.duration !== undefined) {
-      const duration = parseInt(updateData.duration);
+    if (filteredUpdateData.duration !== null && filteredUpdateData.duration !== undefined) {
+      const duration = parseInt(filteredUpdateData.duration);
       if (isNaN(duration) || duration < 15 || duration > 480) {
         return new Response(
           JSON.stringify({ error: 'Duration must be between 15 and 480 minutes' }),
@@ -985,12 +1003,12 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
           }
         );
       }
-      updateData.duration = duration;
+      filteredUpdateData.duration = duration;
     }
 
     // Validate round if provided
-    if (updateData.round !== null && updateData.round !== undefined) {
-      const round = parseInt(updateData.round);
+    if (filteredUpdateData.round !== null && filteredUpdateData.round !== undefined) {
+      const round = parseInt(filteredUpdateData.round);
       if (isNaN(round) || round < 1 || round > 10) {
         return new Response(
           JSON.stringify({ error: 'Round must be between 1 and 10' }),
@@ -1000,11 +1018,11 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
           }
         );
       }
-      updateData.round = round;
+      filteredUpdateData.round = round;
     }
 
     // Validate notes length
-    if (updateData.notes && updateData.notes.length > 1000) {
+    if (filteredUpdateData.notes && filteredUpdateData.notes.length > 1000) {
       return new Response(
         JSON.stringify({ error: 'Notes must be less than 1000 characters' }),
         { 
@@ -1017,9 +1035,9 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
     // Validate URLs if provided
     const urlFields = ['company_website', 'company_linkedin_url', 'other_urls', 'interviewer_linkedin_url'];
     for (const field of urlFields) {
-      if (updateData[field] && updateData[field].trim() !== '') {
+      if (filteredUpdateData[field] && filteredUpdateData[field].trim() !== '') {
         try {
-          new URL(updateData[field]);
+          new URL(filteredUpdateData[field]);
         } catch {
           return new Response(
             JSON.stringify({ error: `Invalid URL format for ${field.replace(/_/g, ' ')}` }),
@@ -1033,9 +1051,9 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
     }
 
     // Validate email if provided
-    if (updateData.interviewer_email && updateData.interviewer_email.trim() !== '') {
+    if (filteredUpdateData.interviewer_email && filteredUpdateData.interviewer_email.trim() !== '') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(updateData.interviewer_email)) {
+      if (!emailRegex.test(filteredUpdateData.interviewer_email)) {
         return new Response(
           JSON.stringify({ error: 'Invalid interviewer email format' }),
           { 
@@ -1046,12 +1064,12 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
       }
     }
 
-    console.log('Processed update data:', updateData);
+    console.log('Processed update data:', filteredUpdateData);
 
     // Update the interview
     const { data: interview, error } = await supabase
       .from('interviews')
-      .update(updateData)
+      .update(filteredUpdateData)
       .eq('id', id)
       .select()
       .single();
