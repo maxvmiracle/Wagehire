@@ -876,13 +876,40 @@ async function handleDeleteInterview(id: string, headers: any, supabase: any) {
 
 async function handleGetProfile(headers: any, supabase: any) {
   try {
-    // For now, return a placeholder (in production, extract user ID from JWT)
-    const { data: users, error } = await supabase
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Get user profile by ID
+    const { data: user, error } = await supabase
       .from('users')
       .select('id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at')
-      .limit(1);
+      .eq('id', userId)
+      .single();
 
-    if (error || !users || users.length === 0) {
+    if (error || !user) {
       return new Response(
         JSON.stringify({ error: 'Profile not found' }),
         { 
@@ -893,7 +920,7 @@ async function handleGetProfile(headers: any, supabase: any) {
     }
 
     return new Response(
-      JSON.stringify({ user: users[0] }),
+      JSON.stringify({ user }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 

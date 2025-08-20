@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import notificationService from '../services/notificationService';
 import { 
@@ -11,6 +12,7 @@ import {
 
 const ScheduleInterview = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     company_name: '',
@@ -180,6 +182,7 @@ const ScheduleInterview = () => {
       
       // Prepare data for submission - only include necessary fields
       const submitData = {
+        candidate_id: user.id, // Add the current user's ID as candidate_id
         company_name: formData.company_name.trim(),
         job_title: formData.job_title.trim(),
         scheduled_date: scheduledDateTime,
