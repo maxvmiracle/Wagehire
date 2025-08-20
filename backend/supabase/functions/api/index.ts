@@ -17,6 +17,24 @@ function extractUserToken(headers: any): string | null {
   return userToken || null;
 }
 
+function decodeJWT(token: string): any {
+  try {
+    // Simple JWT decoding (in production, use proper JWT library)
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    
+    // Decode the payload (second part)
+    const payload = parts[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded;
+  } catch (error) {
+    console.error('JWT decode error:', error);
+    return null;
+  }
+}
+
 function validateStrongPassword(password: string) {
   const errors: string[] = [];
   
@@ -896,22 +914,37 @@ async function handleGetProfile(headers: any, supabase: any) {
 
 async function handleUpdateProfile(body: any, headers: any, supabase: any) {
   try {
-    const { id, ...updateData } = body;
-    
-    if (!id) {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
       return new Response(
-        JSON.stringify({ error: 'User ID is required' }),
+        JSON.stringify({ error: 'Authentication required' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
+          status: 401 
         }
       );
     }
 
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+    const updateData = body; // Use the entire body as update data
+
     const { data: user, error } = await supabase
       .from('users')
       .update(updateData)
-      .eq('id', id)
+      .eq('id', userId)
       .select('id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at')
       .single();
 
