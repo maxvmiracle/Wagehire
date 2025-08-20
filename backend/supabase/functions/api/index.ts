@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-token, X-User-Token',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 }
 
 // JWT Secret (in production, use environment variable)
@@ -250,6 +251,10 @@ async function handleUserRoutes(path: string, method: string, body: any, headers
     return handleUpdateProfile(body, headers, supabase)
   }
   
+  if (userPath === '/me/dashboard' && method === 'GET') {
+    return handleGetUserDashboard(headers, supabase)
+  }
+  
   return new Response(
     JSON.stringify({ error: 'User route not found' }),
     { 
@@ -269,6 +274,14 @@ async function handleAdminRoutes(path: string, method: string, body: any, header
   
   if (adminPath === '/users' && method === 'POST') {
     return handleCreateUser(body, headers, supabase)
+  }
+  
+  if (adminPath === '/dashboard' && method === 'GET') {
+    return handleGetAdminDashboard(headers, supabase)
+  }
+  
+  if (adminPath === '/interviews' && method === 'GET') {
+    return handleGetAdminInterviews(headers, supabase)
   }
   
   return new Response(
@@ -1011,4 +1024,127 @@ async function handleDeleteCandidate(id: string, headers: any, supabase: any) {
       status: 200 
     }
   )
+}
+
+// Dashboard handlers
+async function handleGetUserDashboard(headers: any, supabase: any) {
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // For now, return basic stats (in production, calculate from database)
+    const stats = {
+      totalInterviews: 0,
+      completedInterviews: 0,
+      upcomingInterviews: 0,
+      profileCompletion: 75
+    };
+
+    return new Response(
+      JSON.stringify({ stats }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get user dashboard error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
+}
+
+async function handleGetAdminDashboard(headers: any, supabase: any) {
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // For now, return basic admin stats (in production, calculate from database)
+    const stats = {
+      totalUsers: 0,
+      totalCandidates: 0,
+      totalInterviews: 0,
+      completedInterviews: 0,
+      upcomingInterviews: 0
+    };
+
+    return new Response(
+      JSON.stringify({ stats }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get admin dashboard error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
+}
+
+async function handleGetAdminInterviews(headers: any, supabase: any) {
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // For now, return empty interviews array (in production, get from database)
+    const interviews = [];
+
+    return new Response(
+      JSON.stringify({ interviews }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get admin interviews error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 } 
