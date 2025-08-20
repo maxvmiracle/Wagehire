@@ -871,10 +871,10 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
       );
     }
 
-    // Check if interview exists
+    // Check if interview exists and get current data
     const { data: existingInterview, error: checkError } = await supabase
       .from('interviews')
-      .select('id')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -889,12 +889,169 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
       );
     }
 
-    console.log('Interview found, proceeding with update...');
+    console.log('Current interview data:', existingInterview);
+
+    // Validate and process update data
+    const updateData = { ...body };
+    
+    // Handle status changes and related field updates
+    const newStatus = updateData.status;
+    const oldStatus = existingInterview.status;
+    
+    console.log(`Status change: ${oldStatus} -> ${newStatus}`);
+
+    // Status-specific validations and field adjustments
+    if (newStatus === 'uncertain') {
+      // For uncertain status, clear scheduled date and duration
+      updateData.scheduled_date = null;
+      updateData.duration = null;
+      console.log('Status changed to uncertain - cleared scheduled_date and duration');
+    } else if (newStatus === 'completed') {
+      // For completed status, ensure we have a scheduled date
+      if (!updateData.scheduled_date && !existingInterview.scheduled_date) {
+        return new Response(
+          JSON.stringify({ error: 'Scheduled date is required for completed interviews' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+      console.log('Status changed to completed');
+    } else if (newStatus === 'cancelled') {
+      // For cancelled status, we can keep the scheduled date for reference
+      console.log('Status changed to cancelled');
+    } else if (newStatus === 'scheduled' || newStatus === 'confirmed') {
+      // For scheduled/confirmed status, ensure we have required fields
+      if (!updateData.scheduled_date && !existingInterview.scheduled_date) {
+        return new Response(
+          JSON.stringify({ error: 'Scheduled date is required for scheduled/confirmed interviews' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+      if (!updateData.duration && !existingInterview.duration) {
+        updateData.duration = 60; // Default duration
+      }
+      console.log('Status changed to scheduled/confirmed');
+    }
+
+    // Validate required fields based on status
+    if (!updateData.company_name && !existingInterview.company_name) {
+      return new Response(
+        JSON.stringify({ error: 'Company name is required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    if (!updateData.job_title && !existingInterview.job_title) {
+      return new Response(
+        JSON.stringify({ error: 'Job title is required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Validate date format if provided
+    if (updateData.scheduled_date) {
+      const date = new Date(updateData.scheduled_date);
+      if (isNaN(date.getTime())) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid scheduled date format' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+    }
+
+    // Validate duration if provided
+    if (updateData.duration !== null && updateData.duration !== undefined) {
+      const duration = parseInt(updateData.duration);
+      if (isNaN(duration) || duration < 15 || duration > 480) {
+        return new Response(
+          JSON.stringify({ error: 'Duration must be between 15 and 480 minutes' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+      updateData.duration = duration;
+    }
+
+    // Validate round if provided
+    if (updateData.round !== null && updateData.round !== undefined) {
+      const round = parseInt(updateData.round);
+      if (isNaN(round) || round < 1 || round > 10) {
+        return new Response(
+          JSON.stringify({ error: 'Round must be between 1 and 10' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+      updateData.round = round;
+    }
+
+    // Validate notes length
+    if (updateData.notes && updateData.notes.length > 1000) {
+      return new Response(
+        JSON.stringify({ error: 'Notes must be less than 1000 characters' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Validate URLs if provided
+    const urlFields = ['company_website', 'company_linkedin_url', 'other_urls', 'interviewer_linkedin_url'];
+    for (const field of urlFields) {
+      if (updateData[field] && updateData[field].trim() !== '') {
+        try {
+          new URL(updateData[field]);
+        } catch {
+          return new Response(
+            JSON.stringify({ error: `Invalid URL format for ${field.replace(/_/g, ' ')}` }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400 
+            }
+          );
+        }
+      }
+    }
+
+    // Validate email if provided
+    if (updateData.interviewer_email && updateData.interviewer_email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(updateData.interviewer_email)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid interviewer email format' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+    }
+
+    console.log('Processed update data:', updateData);
 
     // Update the interview
     const { data: interview, error } = await supabase
       .from('interviews')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -916,10 +1073,19 @@ async function handleUpdateInterview(id: string, body: any, headers: any, supaba
 
     console.log('Interview updated successfully:', interview);
 
+    // Prepare response message based on status change
+    let message = 'Interview updated successfully';
+    if (oldStatus !== newStatus) {
+      message = `Interview ${newStatus} successfully`;
+    }
+
     return new Response(
       JSON.stringify({
-        message: 'Interview updated successfully',
-        interview
+        message: message,
+        interview,
+        statusChanged: oldStatus !== newStatus,
+        oldStatus,
+        newStatus
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

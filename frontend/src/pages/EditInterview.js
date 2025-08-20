@@ -131,6 +131,8 @@ const EditInterview = () => {
   const validateForm = () => {
     const newErrors = {};
     
+    console.log('Validating form with data:', formData);
+    
     // Required fields validation
     if (!formData.company_name.trim()) {
       newErrors.company_name = 'Company name is required';
@@ -140,26 +142,51 @@ const EditInterview = () => {
       newErrors.job_title = 'Job title is required';
     }
     
-    // Date and time validation - only required if status is not uncertain
-    if (formData.status !== 'uncertain') {
-      if (!formData.scheduled_date) {
-        newErrors.scheduled_date = 'Please select a date';
-      }
-      // Note: Past dates are allowed for flexibility (forgot interviews, etc.)
-      
-      if (!formData.scheduled_time) {
-        newErrors.scheduled_time = 'Please select a time';
-      }
+    // Status-specific validations
+    switch (formData.status) {
+      case 'uncertain':
+        // For uncertain status, date/time/duration are not required
+        break;
+        
+      case 'scheduled':
+      case 'confirmed':
+        // For scheduled/confirmed status, date and time are required
+        if (!formData.scheduled_date) {
+          newErrors.scheduled_date = 'Please select a date for scheduled interview';
+        }
+        if (!formData.scheduled_time) {
+          newErrors.scheduled_time = 'Please select a time for scheduled interview';
+        }
+        if (!formData.duration || formData.duration < 15) {
+          newErrors.duration = 'Duration must be at least 15 minutes for scheduled interview';
+        }
+        break;
+        
+      case 'completed':
+        // For completed status, date is required but time can be flexible
+        if (!formData.scheduled_date) {
+          newErrors.scheduled_date = 'Please select a date for completed interview';
+        }
+        break;
+        
+      case 'cancelled':
+        // For cancelled status, date is optional but helpful for reference
+        break;
+        
+      default:
+        // For any other status, require date and time
+        if (!formData.scheduled_date) {
+          newErrors.scheduled_date = 'Please select a date';
+        }
+        if (!formData.scheduled_time) {
+          newErrors.scheduled_time = 'Please select a time';
+        }
+        if (!formData.duration || formData.duration < 15) {
+          newErrors.duration = 'Duration must be at least 15 minutes';
+        }
     }
     
-    // Duration validation - only required if status is not uncertain
-    if (formData.status !== 'uncertain') {
-      if (!formData.duration || formData.duration < 15) {
-        newErrors.duration = 'Duration must be at least 15 minutes';
-      }
-    }
-    
-    // Round validation - simplified
+    // Round validation
     const roundValue = parseInt(formData.round, 10);
     if (!roundValue || roundValue < 1 || roundValue > 10) {
       newErrors.round = 'Please enter a valid round number (1-10)';
@@ -173,23 +200,31 @@ const EditInterview = () => {
       newErrors.interview_type = 'Please select an interview type';
     }
     
-    // URL validations for optional fields - REMOVED to avoid issues
-    // const urlFields = [
-    //   { field: 'company_website', name: 'Company Website' },
-    //   { field: 'company_linkedin_url', name: 'Company LinkedIn URL' },
-    //   { field: 'other_urls', name: 'Other URLs' }
-    // ];
+    // URL validations for optional fields
+    const urlFields = [
+      { field: 'company_website', name: 'Company Website' },
+      { field: 'company_linkedin_url', name: 'Company LinkedIn URL' },
+      { field: 'other_urls', name: 'Other URLs' },
+      { field: 'interviewer_linkedin_url', name: 'Interviewer LinkedIn URL' }
+    ];
     
-    // urlFields.forEach(({ field, name }) => {
-    //   if (formData[field] && !formData[field].match(/^https?:\/\/.+/)) {
-    //     newErrors[field] = `Please enter a valid URL starting with http:// or https://`;
-    //   }
-    // });
+    urlFields.forEach(({ field, name }) => {
+      if (formData[field] && formData[field].trim() !== '') {
+        try {
+          new URL(formData[field]);
+        } catch {
+          newErrors[field] = `Please enter a valid URL for ${name}`;
+        }
+      }
+    });
     
-    // Email validation for interviewer - REMOVED to avoid issues
-    // if (formData.interviewer_email && !formData.interviewer_email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-    //   newErrors.interviewer_email = 'Please enter a valid email address';
-    // }
+    // Email validation for interviewer
+    if (formData.interviewer_email && formData.interviewer_email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.interviewer_email)) {
+        newErrors.interviewer_email = 'Please enter a valid email address for interviewer';
+      }
+    }
     
     // Salary range validation (if provided)
     if (formData.salary_range && formData.salary_range.length > 50) {
@@ -197,8 +232,23 @@ const EditInterview = () => {
     }
     
     // Notes validation (if provided)
-    if (formData.notes && formData.notes.length > 300) {
-      newErrors.notes = 'Notes must be less than 300 characters';
+    if (formData.notes && formData.notes.length > 1000) {
+      newErrors.notes = 'Notes must be less than 1000 characters';
+    }
+    
+    // Location validation (if provided)
+    if (formData.location && formData.location.length > 100) {
+      newErrors.location = 'Location must be less than 100 characters';
+    }
+    
+    // Interviewer name validation (if provided)
+    if (formData.interviewer_name && formData.interviewer_name.length > 100) {
+      newErrors.interviewer_name = 'Interviewer name must be less than 100 characters';
+    }
+    
+    // Interviewer position validation (if provided)
+    if (formData.interviewer_position && formData.interviewer_position.length > 100) {
+      newErrors.interviewer_position = 'Interviewer position must be less than 100 characters';
     }
     
     setErrors(newErrors);
@@ -221,22 +271,34 @@ const EditInterview = () => {
       if (formData.status !== 'uncertain' && formData.scheduled_date && formData.scheduled_time) {
         scheduledDateTime = new Date(`${formData.scheduled_date}T${formData.scheduled_time}`).toISOString();
       } else if (formData.status === 'uncertain') {
-        // For uncertain status, use current date as placeholder
-        scheduledDateTime = new Date().toISOString();
+        // For uncertain status, set to null
+        scheduledDateTime = null;
       }
       
-      await interviewApi.update(id, {
+      // Prepare update data with status-specific handling
+      const updateData = {
         ...formData,
         scheduled_date: scheduledDateTime,
         interview_type: formData.interview_type,
         duration: formData.status === 'uncertain' ? null : (formData.duration ? parseInt(formData.duration, 10) : formData.duration)
-      });
+      };
 
-      toast.success('Interview updated successfully!');
+      console.log('Submitting update data:', updateData);
+
+      const response = await interviewApi.update(id, updateData);
+
+      // Show appropriate success message based on status change
+      if (response.statusChanged) {
+        toast.success(`Interview ${response.newStatus} successfully!`);
+      } else {
+        toast.success('Interview updated successfully!');
+      }
+
       navigate(`/interviews/${id}`);
     } catch (error) {
       console.error('Error updating interview:', error);
-      toast.error(error.response?.data?.error || 'Failed to update interview');
+      const errorMessage = error.response?.data?.error || 'Failed to update interview';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
