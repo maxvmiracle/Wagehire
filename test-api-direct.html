@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #0056b3; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .highlight { background-color: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Direct API Test</h1>
+        <p>This test will verify if the backend API is working correctly from your browser.</p>
+        
+        <div class="highlight">
+            <strong>⚠️ IMPORTANT:</strong> If this test shows correct data but your main app doesn't, it means your browser is caching old data.
+        </div>
+
+        <div class="test-section">
+            <h3>Step 1: Test Dashboard API Directly</h3>
+            <p>This will test the exact same API that your dashboard uses.</p>
+            <button onclick="testDashboardAPI()">Test Dashboard API</button>
+            <div id="apiResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Step 2: Browser Cache Test</h3>
+            <p>This will help determine if it's a caching issue.</p>
+            <button onclick="testCache()">Test Browser Cache</button>
+            <div id="cacheResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Current Status</h3>
+            <div id="status">Ready to test</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Troubleshooting Steps</h3>
+            <ol>
+                <li><strong>If API test shows correct data:</strong> Your browser is caching old data</li>
+                <li><strong>Hard Refresh:</strong> Press Ctrl+F5 (Windows) or Cmd+Shift+R (Mac)</li>
+                <li><strong>Clear Cache:</strong> Open DevTools (F12) → Right-click refresh → "Empty Cache and Hard Reload"</li>
+                <li><strong>Try Incognito:</strong> Open the app in an incognito/private window</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xzndkdqlsllwyygbniht.supabase.co/functions/v1/api';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6bmRrZHFsc2xsd3l5Z2JuaWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MDc2ODMsImV4cCI6MjA3MTI4MzY4M30.hW0GaAfwNUgsR9_JFgqfi96yP-odqqBc7T6Q2OpxTJQ';
+
+        function showResult(elementId, message, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre>${message}</pre>`;
+            element.className = `test-section ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading">Loading...</div>';
+        }
+
+        async function testDashboardAPI() {
+            showLoading('apiResult');
+            
+            try {
+                // First, let's try to get the user's token from localStorage (if they're logged in)
+                const userToken = localStorage.getItem('token');
+                
+                if (!userToken) {
+                    showResult('apiResult', `❌ No user token found in localStorage.\n\nThis means you need to:\n1. Go to https://wagehire.vercel.app\n2. Login to your account\n3. Come back and run this test again\n\nOr the app is not storing the token correctly.`, false);
+                    return;
+                }
+
+                console.log('Testing dashboard API with token:', userToken.substring(0, 50) + '...');
+
+                const response = await fetch(`${SUPABASE_URL}/users/me/dashboard`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'X-User-Token': userToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const stats = data.stats;
+                    const result = `✅ Dashboard API working!\n
+📊 Dashboard Stats:
+• Total Interviews: ${stats.totalInterviews}
+• Today's Interviews: ${stats.todaysInterviews} ${stats.todaysInterviews > 0 ? '✅' : '❌'}
+• Upcoming (7 days): ${stats.upcomingInterviews}
+• Completed: ${stats.completedInterviews} ${stats.completedInterviews > 0 ? '✅' : '❌'}
+
+${stats.todaysInterviews > 0 ? '🎉 SUCCESS: Today\'s interviews showing correctly!' : '❌ ISSUE: Today\'s interviews should show > 0'}
+${stats.completedInterviews > 0 ? '🎉 SUCCESS: Completed interviews showing correctly!' : '❌ ISSUE: Completed interviews should show > 0'}
+
+Full Response: ${JSON.stringify(data, null, 2)}`;
+                    
+                    showResult('apiResult', result, true);
+                    updateStatus(`API test completed - Today: ${stats.todaysInterviews}, Completed: ${stats.completedInterviews}`);
+                } else {
+                    showResult('apiResult', `❌ Dashboard API failed: ${JSON.stringify(data, null, 2)}`, false);
+                }
+            } catch (error) {
+                showResult('apiResult', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function testCache() {
+            showLoading('cacheResult');
+            
+            try {
+                // Test if we can access the main app
+                const response = await fetch('https://wagehire.vercel.app', {
+                    method: 'GET',
+                    cache: 'no-cache' // Force no cache
+                });
+                
+                const result = `✅ Cache test completed!\n
+Status: ${response.status}
+Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}
+
+If the API test above shows correct data but your main app doesn't, try:\n
+1. Hard Refresh: Ctrl+F5\n
+2. Clear Cache: DevTools → Right-click refresh → "Empty Cache and Hard Reload"\n
+3. Try Incognito Mode`;
+                
+                showResult('cacheResult', result, true);
+            } catch (error) {
+                showResult('cacheResult', `❌ Cache test failed: ${error.message}`, false);
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').innerHTML = `<strong>Status:</strong> ${message}`;
+        }
+
+        updateStatus('Ready to test - Make sure you are logged in to https://wagehire.vercel.app first');
+    </script>
+</body>
+</html> 
