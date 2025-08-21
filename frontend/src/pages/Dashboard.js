@@ -342,7 +342,7 @@ const Dashboard = () => {
               <div className="flex items-center">
                 <Target className="w-4 h-4 text-warning-600 mr-2 flex-shrink-0" />
                 <span className="text-sm text-warning-600 font-medium overflow-safe">
-                  {isAdmin() ? 'System users' : 'Scheduled'}
+                  {isAdmin() ? 'System users' : 'Next 7 days'}
                 </span>
               </div>
             </div>

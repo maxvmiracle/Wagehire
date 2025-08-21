@@ -1651,7 +1651,21 @@ async function handleGetAdminDashboard(headers, supabase) {
     // Calculate interview stats
     const totalInterviews = interviews?.length || 0;
     const completedInterviews = interviews?.filter(i => i.status === 'completed').length || 0;
-    const upcomingInterviews = interviews?.filter(i => i.status === 'scheduled').length || 0;
+    
+    // Calculate upcoming interviews (next 7 days, including today from current time)
+    const now = new Date();
+    const nextWeek = new Date(now);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    const upcomingInterviews = interviews?.filter(i => {
+      if (!i.scheduled_date) return false;
+      // Skip completed interviews
+      if (i.status === 'completed') return false;
+      
+      const interviewDate = new Date(i.scheduled_date);
+      // Include interviews from now until next week
+      return interviewDate >= now && interviewDate <= nextWeek;
+    }).length || 0;
 
     const stats = {
       totalUsers: totalUsers || 0,
@@ -1741,19 +1755,19 @@ async function handleGetUserDashboard(headers, supabase) {
       return interviewDateString === todayString;
     }).length || 0;
 
-    // Calculate upcoming interviews (next 7 days, excluding today)
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const nextWeek = new Date(today);
+    // Calculate upcoming interviews (next 7 days, including today from current time)
+    const now = new Date();
+    const nextWeek = new Date(now);
     nextWeek.setDate(nextWeek.getDate() + 7);
     
     const upcomingInterviews = interviews?.filter(i => {
       if (!i.scheduled_date) return false;
+      // Skip completed interviews
+      if (i.status === 'completed') return false;
+      
       const interviewDate = new Date(i.scheduled_date);
-      const interviewDateString = interviewDate.toISOString().split('T')[0];
-      const tomorrowString = tomorrow.toISOString().split('T')[0];
-      const nextWeekString = nextWeek.toISOString().split('T')[0];
-      return interviewDateString >= tomorrowString && interviewDateString <= nextWeekString;
+      // Include interviews from now until next week
+      return interviewDate >= now && interviewDate <= nextWeek;
     }).length || 0;
 
     const stats = {
