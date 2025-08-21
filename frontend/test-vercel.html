@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vercel Dashboard Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #0056b3; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 2px solid #e9ecef; }
+        .stat-number { font-size: 2em; font-weight: bold; color: #007bff; }
+        .stat-label { color: #6c757d; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Vercel Dashboard API Test</h1>
+        <p>Testing the dashboard API from the Vercel deployment at <a href="https://wagehire.vercel.app/dashboard" target="_blank">https://wagehire.vercel.app/dashboard</a></p>
+        
+        <div class="test-section">
+            <h3>Step 1: Register Test User</h3>
+            <button onclick="registerUser()">Register Test User</button>
+            <div id="registerResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Step 2: Create Completed Interview for Today</h3>
+            <button onclick="createCompletedInterview()" id="createBtn" disabled>Create Completed Interview</button>
+            <div id="createResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Step 3: Test Dashboard API</h3>
+            <button onclick="testDashboard()" id="dashboardBtn" disabled>Test Dashboard API</button>
+            <div id="dashboardResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Dashboard Stats Display</h3>
+            <div id="statsDisplay" style="display: none;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalInterviews">-</div>
+                        <div class="stat-label">My Interviews</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="todaysInterviews">-</div>
+                        <div class="stat-label">Today's Interviews</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="upcomingInterviews">-</div>
+                        <div class="stat-label">Upcoming (7 days)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="completedInterviews">-</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>Current Status</h3>
+            <div id="status">Ready to test</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Next Steps</h3>
+            <p>If this test shows correct data but your main app doesn't:</p>
+            <ol>
+                <li><strong>Hard Refresh:</strong> Press Ctrl+F5 on the main app</li>
+                <li><strong>Clear Cache:</strong> Open DevTools (F12) → Right-click refresh → "Empty Cache and Hard Reload"</li>
+                <li><strong>Try Incognito:</strong> Open the main app in an incognito window</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xzndkdqlsllwyygbniht.supabase.co/functions/v1/api';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6bmRrZHFsc2xsd3l5Z2JuaWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MDc2ODMsImV4cCI6MjA3MTI4MzY4M30.hW0GaAfwNUgsR9_JFgqfi96yP-odqqBc7T6Q2OpxTJQ';
+        
+        let userToken = null;
+
+        function showResult(elementId, message, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre>${message}</pre>`;
+            element.className = `test-section ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading">Loading...</div>';
+        }
+
+        function updateStats(stats) {
+            document.getElementById('totalInterviews').textContent = stats.totalInterviews;
+            document.getElementById('todaysInterviews').textContent = stats.todaysInterviews;
+            document.getElementById('upcomingInterviews').textContent = stats.upcomingInterviews;
+            document.getElementById('completedInterviews').textContent = stats.completedInterviews;
+            document.getElementById('statsDisplay').style.display = 'block';
+        }
+
+        async function registerUser() {
+            showLoading('registerResult');
+            
+            try {
+                const email = `vercel-test-${Date.now()}@example.com`;
+                const response = await fetch(`${SUPABASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: 'Password123!',
+                        name: 'Vercel Test User',
+                        phone: '1234567890',
+                        current_position: 'Developer',
+                        experience_years: '2',
+                        skills: 'JavaScript'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    userToken = data.token;
+                    showResult('registerResult', `✅ Registration successful!\nEmail: ${email}\nToken: ${userToken.substring(0, 50)}...`, true);
+                    document.getElementById('createBtn').disabled = false;
+                    updateStatus('User registered successfully');
+                } else {
+                    showResult('registerResult', `❌ Registration failed: ${JSON.stringify(data, null, 2)}`, false);
+                }
+            } catch (error) {
+                showResult('registerResult', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function createCompletedInterview() {
+            if (!userToken) {
+                showResult('createResult', '❌ Please register a user first', false);
+                return;
+            }
+
+            showLoading('createResult');
+            
+            try {
+                const today = new Date();
+                const todayString = today.toISOString().split('T')[0];
+                const currentTime = today.toTimeString().split(' ')[0];
+
+                const response = await fetch(`${SUPABASE_URL}/interviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'X-User-Token': userToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        company_name: 'Pinnacle Tek LLC',
+                        job_title: 'Full Stack Developer',
+                        scheduled_date: todayString,
+                        scheduled_time: currentTime,
+                        status: 'completed', // Mark as completed
+                        location: 'Remote',
+                        notes: 'Vercel test interview - completed'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('createResult', `✅ Completed interview created successfully!\nDate: ${todayString}\nTime: ${currentTime}\nStatus: completed\n\n${JSON.stringify(data, null, 2)}`, true);
+                    document.getElementById('dashboardBtn').disabled = false;
+                    updateStatus('Completed interview created for today');
+                } else {
+                    showResult('createResult', `❌ Interview creation failed: ${JSON.stringify(data, null, 2)}`, false);
+                }
+            } catch (error) {
+                showResult('createResult', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function testDashboard() {
+            if (!userToken) {
+                showResult('dashboardResult', '❌ Please register a user first', false);
+                return;
+            }
+
+            showLoading('dashboardResult');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/users/me/dashboard`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'X-User-Token': userToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const stats = data.stats;
+                    updateStats(stats);
+                    
+                    const result = `✅ Dashboard API working!\n
+📊 Dashboard Stats:
+• Today's Interviews: ${stats.todaysInterviews} ${stats.todaysInterviews > 0 ? '✅' : '❌'}
+• Upcoming (7 days): ${stats.upcomingInterviews} ${stats.upcomingInterviews >= 0 ? '✅' : '❌'}
+• Completed: ${stats.completedInterviews} ${stats.completedInterviews > 0 ? '✅' : '❌'}
+• Total Interviews: ${stats.totalInterviews} ✅
+
+${stats.todaysInterviews > 0 ? '🎉 SUCCESS: Today\'s interviews showing correctly!' : '❌ ISSUE: Today\'s interviews should show > 0'}
+${stats.completedInterviews > 0 ? '🎉 SUCCESS: Completed interviews showing correctly!' : '❌ ISSUE: Completed interviews should show > 0'}
+
+Full Response: ${JSON.stringify(data, null, 2)}`;
+                    
+                    showResult('dashboardResult', result, true);
+                    updateStatus(`Dashboard test completed - Today: ${stats.todaysInterviews}, Completed: ${stats.completedInterviews}`);
+                } else {
+                    showResult('dashboardResult', `❌ Dashboard API failed: ${JSON.stringify(data, null, 2)}`, false);
+                }
+            } catch (error) {
+                showResult('dashboardResult', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').innerHTML = `<strong>Status:</strong> ${message}`;
+        }
+
+        updateStatus('Ready to test - Click "Register Test User" to start');
+    </script>
+</body>
+</html> 
