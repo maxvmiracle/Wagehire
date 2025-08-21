@@ -230,6 +230,12 @@ export const adminApi = {
     const response = await api.get(`/admin/interviews${params}`);
     return response.data;
   },
+
+  // Get detailed reports (admin only)
+  getReports: async () => {
+    const response = await api.get('/admin/reports');
+    return response.data;
+  },
 };
 
 // Health check API
