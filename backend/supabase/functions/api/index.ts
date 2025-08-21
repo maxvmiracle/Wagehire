@@ -409,11 +409,23 @@ async function handleRegister(body, supabase) {
     }
 
     // Check if this is the first user
-    const { count: userCount } = await supabase
+    const { count: userCount, error: countError } = await supabase
       .from('users')
       .select('*', { count: 'exact', head: true });
 
+    if (countError) {
+      console.error('Count error:', countError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to check user count' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
     const isFirstUser = userCount === 0;
+    console.log('User count:', userCount, 'Is first user:', isFirstUser);
     const userRole = isFirstUser ? 'admin' : 'candidate';
 
     // Hash password
@@ -598,25 +610,214 @@ async function handleResetPassword(body, supabase) {
 }
 
 async function handleGetInterviews(headers, supabase) {
-  // Implement get interviews logic
-  return new Response(
-    JSON.stringify({ message: 'Get interviews endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Get user role to determine access
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !currentUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    let query = supabase
+      .from('interviews')
+      .select(`
+        *,
+        candidate:users!interviews_candidate_id_fkey(
+          id,
+          name,
+          email,
+          role,
+          phone,
+          current_position,
+          experience_years,
+          skills
+        )
+      `)
+      .order('scheduled_date', { ascending: false });
+
+    // If not admin, only show user's own interviews
+    if (currentUser.role !== 'admin') {
+      query = query.eq('candidate_id', userId);
+    }
+
+    const { data: interviews, error } = await query;
+
+    if (error) {
+      console.error('Get interviews error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch interviews' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ interviews: interviews || [] }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get interviews error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleCreateInterview(body, headers, supabase) {
-  // Implement create interview logic
-  return new Response(
-    JSON.stringify({ message: 'Create interview endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Validate required fields
+    const requiredFields = ['company_name', 'job_title', 'scheduled_date', 'scheduled_time'];
+    for (const field of requiredFields) {
+      if (!body[field]) {
+        return new Response(
+          JSON.stringify({ error: `${field} is required` }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+    }
+
+    // Create interview data
+    const { scheduled_time, ...bodyWithoutTime } = body;
+    
+    // Combine date and time into a single timestamp
+    let scheduledDateTime = null;
+    if (body.scheduled_date && body.scheduled_time) {
+      scheduledDateTime = new Date(`${body.scheduled_date}T${body.scheduled_time}`).toISOString();
+    }
+    
+    const interviewData = {
+      ...bodyWithoutTime,
+      scheduled_date: scheduledDateTime,
+      candidate_id: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    const { data: interview, error } = await supabase
+      .from('interviews')
+      .insert(interviewData)
+      .select(`
+        *,
+        candidate:users!interviews_candidate_id_fkey(
+          id,
+          name,
+          email,
+          role,
+          phone,
+          current_position,
+          experience_years,
+          skills
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Create interview error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create interview' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'Interview scheduled successfully',
+        interview
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 201 
+      }
+    );
+
+  } catch (error) {
+    console.error('Create interview error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleGetInterview(id, headers, supabase) {
@@ -879,14 +1080,102 @@ async function handleCreateUser(body, headers, supabase) {
 }
 
 async function handleGetCandidates(headers, supabase) {
-  // Implement get candidates logic
-  return new Response(
-    JSON.stringify({ message: 'Get candidates endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Get user role to determine access
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !currentUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    let query = supabase
+      .from('users')
+      .select(`
+        id,
+        email,
+        name,
+        role,
+        phone,
+        resume_url,
+        current_position,
+        experience_years,
+        skills,
+        created_at
+      `)
+      .order('created_at', { ascending: false });
+
+    // If not admin, only show candidates (users with role 'candidate')
+    if (currentUser.role !== 'admin') {
+      query = query.eq('role', 'candidate');
+    }
+
+    const { data: candidates, error } = await query;
+
+    if (error) {
+      console.error('Get candidates error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch candidates' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ candidates: candidates || [] }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get candidates error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleCreateCandidate(body, headers, supabase) {

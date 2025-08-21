@@ -442,10 +442,10 @@ async function handleRegister(body, supabase) {
 
     if (insertError) {
       console.error('Insert error:', insertError);
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Failed to create user' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
         }
       );
@@ -530,16 +530,16 @@ async function handleLogin(body, supabase) {
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
 
-    return new Response(
+  return new Response(
       JSON.stringify({
         message: 'Login successful',
         token,
         user: userWithoutPassword
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
     );
 
   } catch (error) {
@@ -724,12 +724,12 @@ async function handleGetAllUsers(headers, supabase) {
       );
     }
 
-    return new Response(
+  return new Response(
       JSON.stringify({ users }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
     );
 
   } catch (error) {
