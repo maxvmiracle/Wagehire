@@ -26,7 +26,7 @@ serve(async (req) => {
     const method = req.method
     let body = null;
     if (method !== 'GET' && method !== 'DELETE') {
-      try {
+    try {
         body = await req.json();
       } catch (error) {
         console.error('Error parsing request body:', error);
@@ -753,10 +753,10 @@ async function handleCreateInterview(body, headers, supabase) {
     const requiredFields = ['company_name', 'job_title'];
     for (const field of requiredFields) {
       if (!body[field]) {
-        return new Response(
+    return new Response(
           JSON.stringify({ error: `${field} is required` }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400 
           }
         );
@@ -874,10 +874,10 @@ async function handleGetInterview(id, headers, supabase) {
       .single();
 
     if (userError || !currentUser) {
-      return new Response(
+        return new Response(
         JSON.stringify({ error: 'User not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 404 
         }
       );
@@ -918,35 +918,35 @@ async function handleGetInterview(id, headers, supabase) {
       );
     }
 
-    return new Response(
+      return new Response(
       JSON.stringify({ interview }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
       }
     );
 
   } catch (error) {
     console.error('Get interview error:', error);
-    return new Response(
+        return new Response(
       JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
+          }
+        );
       }
-    );
-  }
-}
+    }
 
 async function handleUpdateInterview(id, body, headers, supabase) {
   try {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
     if (!userToken) {
-      return new Response(
+        return new Response(
         JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
         }
       );
@@ -955,10 +955,10 @@ async function handleUpdateInterview(id, body, headers, supabase) {
     // Extract user ID from JWT token
     const decodedToken = decodeJWT(userToken);
     if (!decodedToken || !decodedToken.userId) {
-      return new Response(
+        return new Response(
         JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
         }
       );
@@ -997,10 +997,10 @@ async function handleUpdateInterview(id, body, headers, supabase) {
     const { data: existingInterview, error: checkError } = await query.single();
 
     if (checkError || !existingInterview) {
-      return new Response(
+        return new Response(
         JSON.stringify({ error: 'Interview not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 404 
         }
       );
@@ -1327,7 +1327,7 @@ async function handleGetAllUsers(headers, supabase) {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
     if (!userToken) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1384,10 +1384,10 @@ async function handleGetAllUsers(headers, supabase) {
 
     return new Response(
       JSON.stringify({ users }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
     );
 
   } catch (error) {
@@ -1418,7 +1418,7 @@ async function handleGetCandidates(headers, supabase) {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
     if (!userToken) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1494,10 +1494,10 @@ async function handleGetCandidates(headers, supabase) {
 
     return new Response(
       JSON.stringify({ candidates: candidates || [] }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
     );
 
   } catch (error) {
@@ -1812,7 +1812,7 @@ async function handleGetAdminInterviews(headers, supabase) {
       .single();
 
     if (userError || !currentUser || currentUser.role !== 'admin') {
-      return new Response(
+    return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
