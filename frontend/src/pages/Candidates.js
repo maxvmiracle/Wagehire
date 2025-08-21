@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import { candidateApi } from '../services/api';
 import LoadingScreen from '../components/LoadingScreen';
 import { Users } from 'lucide-react';
 import { 
@@ -31,8 +31,8 @@ const Candidates = () => {
 
   const fetchCandidates = async () => {
     try {
-      const response = await api.get('/candidates');
-      setCandidates(response.data.candidates);
+      const response = await candidateApi.getAll();
+      setCandidates(response.candidates);
     } catch (error) {
       console.error('Error fetching candidates:', error);
     } finally {
@@ -46,7 +46,7 @@ const Candidates = () => {
     }
 
     try {
-      await api.delete(`/candidates/${candidateId}`);
+      await candidateApi.delete(candidateId);
       setCandidates(candidates.filter(c => c.id !== candidateId));
       alert('Candidate deleted successfully');
     } catch (error) {

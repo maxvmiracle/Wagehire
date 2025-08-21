@@ -223,6 +223,46 @@ export const userApi = {
   },
 };
 
+// Admin APIs
+export const adminApi = {
+  // Get admin dashboard stats
+  getDashboard: async () => {
+    const response = await api.get('/admin/dashboard');
+    return response.data;
+  },
+
+  // Get all users (admin only)
+  getAllUsers: async () => {
+    const response = await api.get('/admin/users');
+    return response.data;
+  },
+
+  // Create new user (admin only)
+  createUser: async (userData) => {
+    const response = await api.post('/admin/users', userData);
+    return response.data;
+  },
+
+  // Update user role (admin only)
+  updateUserRole: async (userId, role) => {
+    const response = await api.put(`/admin/users/${userId}/role`, { role });
+    return response.data;
+  },
+
+  // Delete user (admin only)
+  deleteUser: async (userId) => {
+    const response = await api.delete(`/admin/users/${userId}`);
+    return response.data;
+  },
+
+  // Get all interviews (admin only)
+  getInterviews: async (limit = null) => {
+    const params = limit ? `?limit=${limit}` : '';
+    const response = await api.get(`/admin/interviews${params}`);
+    return response.data;
+  },
+};
+
 // Health check API
 export const healthApi = {
   // Check API health

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
+import { adminApi } from '../services/api';
 import LoadingScreen from '../components/LoadingScreen';
 import {
   Users,
@@ -33,17 +33,15 @@ const Admin = () => {
 
     const fetchAdminData = async () => {
       try {
-        const [statsResponse, usersResponse, candidatesResponse, interviewsResponse] = await Promise.all([
-          api.get('/admin/dashboard'),
-          api.get('/admin/users'),
-          api.get('/admin/candidates'),
-          api.get('/admin/interviews?limit=5')
+        const [statsResponse, usersResponse, interviewsResponse] = await Promise.all([
+          adminApi.getDashboard(),
+          adminApi.getAllUsers(),
+          adminApi.getInterviews(5)
         ]);
 
-        setStats(statsResponse.data.stats);
-        setUsers(usersResponse.data.users);
-        setCandidates(candidatesResponse.data.candidates);
-        setRecentInterviews(interviewsResponse.data.interviews);
+        setStats(statsResponse.stats);
+        setUsers(usersResponse.users);
+        setRecentInterviews(interviewsResponse.interviews);
       } catch (error) {
         console.error('Error fetching admin data:', error);
       } finally {
@@ -56,7 +54,7 @@ const Admin = () => {
 
   const handleRoleChange = async (userId, newRole) => {
     try {
-      await api.put(`/admin/users/${userId}/role`, { role: newRole });
+      await adminApi.updateUserRole(userId, newRole);
       
       // Update local state
       setUsers(users.map(user => 
@@ -77,7 +75,7 @@ const Admin = () => {
     }
 
     try {
-      await api.delete(`/admin/users/${userId}`);
+      await adminApi.deleteUser(userId);
       
       // Update local state
       setUsers(users.filter(user => user.id !== userId));

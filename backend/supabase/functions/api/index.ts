@@ -327,6 +327,16 @@ async function handleAdminRoutes(path: string, method: string, body: any, header
     return handleCreateUser(body, headers, supabase)
   }
   
+  if (adminPath.startsWith('/users/') && adminPath.endsWith('/role') && method === 'PUT') {
+    const userId = adminPath.replace('/users/', '').replace('/role', '')
+    return handleUpdateUserRole(userId, body, headers, supabase)
+  }
+  
+  if (adminPath.startsWith('/users/') && method === 'DELETE') {
+    const userId = adminPath.replace('/users/', '')
+    return handleDeleteUser(userId, headers, supabase)
+  }
+  
   if (adminPath === '/dashboard' && method === 'GET') {
     return handleGetAdminDashboard(headers, supabase)
   }
@@ -1362,80 +1372,993 @@ async function handleUpdateProfile(body: any, headers: any, supabase: any) {
 }
 
 async function handleGetAllUsers(headers: any, supabase: any) {
-  // Implement get all users logic
-  return new Response(
-    JSON.stringify({ message: 'Get all users endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    // Get all users
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Get all users error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch users' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ users }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get all users error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleCreateUser(body: any, headers: any, supabase: any) {
-  // Implement create user logic
-  return new Response(
-    JSON.stringify({ message: 'Create user endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    const { 
+      email, 
+      password, 
+      name, 
+      role = 'candidate',
+      phone, 
+      current_position, 
+      experience_years, 
+      skills 
+    } = body;
+
+    // Validate required fields
+    if (!email || !password || !name) {
+      return new Response(
+        JSON.stringify({ error: 'Email, password, and name are required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email format' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Validate strong password
+    const passwordValidation = validateStrongPassword(password);
+    if (!passwordValidation.isValid) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Password does not meet security requirements',
+          passwordErrors: passwordValidation.errors
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Check if user already exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingUser) {
+      return new Response(
+        JSON.stringify({ error: 'User already exists' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+
+    // Prepare user data
+    const userData = {
+      email,
+      password: hashedPassword,
+      name,
+      role,
+      phone: phone && phone.trim() !== '' ? phone : null,
+      current_position: current_position && current_position.trim() !== '' ? current_position : null,
+      experience_years: experience_years && experience_years !== '' ? parseInt(experience_years, 10) : null,
+      skills: skills && skills.trim() !== '' ? skills : null,
+      email_verified: true
+    };
+
+    // Insert new user
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert(userData)
+      .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
+      .single();
+
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create user' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'User created successfully',
+        user: newUser
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 201 
+      }
+    );
+
+  } catch (error) {
+    console.error('Create user error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleGetCandidates(headers: any, supabase: any) {
-  // Implement get candidates logic
-  return new Response(
-    JSON.stringify({ message: 'Get candidates endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    let candidates;
+    let error;
+
+    if (currentUser.role === 'admin') {
+      // Admin can see all candidates
+      const result = await supabase
+        .from('users')
+        .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
+        .eq('role', 'candidate')
+        .order('created_at', { ascending: false });
+      
+      candidates = result.data;
+      error = result.error;
+    } else {
+      // Regular users can only see their own profile
+      const result = await supabase
+        .from('users')
+        .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
+        .eq('id', decodedToken.userId)
+        .eq('role', 'candidate')
+        .single();
+      
+      candidates = result.data ? [result.data] : [];
+      error = result.error;
+    }
+
+    if (error) {
+      console.error('Get candidates error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch candidates' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ candidates }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get candidates error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleCreateCandidate(body: any, headers: any, supabase: any) {
-  // Implement create candidate logic
-  return new Response(
-    JSON.stringify({ message: 'Create candidate endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    const { 
+      email, 
+      password, 
+      name, 
+      phone, 
+      current_position, 
+      experience_years, 
+      skills 
+    } = body;
+
+    // Validate required fields
+    if (!email || !password || !name) {
+      return new Response(
+        JSON.stringify({ error: 'Email, password, and name are required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email format' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Validate strong password
+    const passwordValidation = validateStrongPassword(password);
+    if (!passwordValidation.isValid) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Password does not meet security requirements',
+          passwordErrors: passwordValidation.errors
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Check if user already exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingUser) {
+      return new Response(
+        JSON.stringify({ error: 'User already exists' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+
+    // Prepare user data
+    const userData = {
+      email,
+      password: hashedPassword,
+      name,
+      role: 'candidate',
+      phone: phone && phone.trim() !== '' ? phone : null,
+      current_position: current_position && current_position.trim() !== '' ? current_position : null,
+      experience_years: experience_years && experience_years !== '' ? parseInt(experience_years, 10) : null,
+      skills: skills && skills.trim() !== '' ? skills : null,
+      email_verified: true
+    };
+
+    // Insert new candidate
+    const { data: newCandidate, error: insertError } = await supabase
+      .from('users')
+      .insert(userData)
+      .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
+      .single();
+
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create candidate' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'Candidate created successfully',
+        candidate: newCandidate
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 201 
+      }
+    );
+
+  } catch (error) {
+    console.error('Create candidate error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleGetCandidate(id: string, headers: any, supabase: any) {
-  // Implement get candidate logic
-  return new Response(
-    JSON.stringify({ message: `Get candidate ${id} endpoint - implement your logic here` }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    // Check if user can access this candidate
+    if (currentUser.role !== 'admin' && decodedToken.userId !== id) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    // Get candidate
+    const { data: candidate, error } = await supabase
+      .from('users')
+      .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
+      .eq('id', id)
+      .eq('role', 'candidate')
+      .single();
+
+    if (error || !candidate) {
+      return new Response(
+        JSON.stringify({ error: 'Candidate not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ candidate }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get candidate error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleUpdateCandidate(id: string, body: any, headers: any, supabase: any) {
-  // Implement update candidate logic
-  return new Response(
-    JSON.stringify({ message: `Update candidate ${id} endpoint - implement your logic here` }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    // Check if user can update this candidate
+    if (currentUser.role !== 'admin' && decodedToken.userId !== id) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    // Prepare update data (exclude sensitive fields)
+    const updateData = {
+      name: body.name,
+      phone: body.phone,
+      current_position: body.current_position,
+      experience_years: body.experience_years ? parseInt(body.experience_years, 10) : null,
+      skills: body.skills
+    };
+
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    // Update candidate
+    const { data: candidate, error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', id)
+      .eq('role', 'candidate')
+      .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
+      .single();
+
+    if (error || !candidate) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to update candidate' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'Candidate updated successfully',
+        candidate
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Update candidate error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleDeleteCandidate(id: string, headers: any, supabase: any) {
-  // Implement delete candidate logic
-  return new Response(
-    JSON.stringify({ message: `Delete candidate ${id} endpoint - implement your logic here` }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    // Delete candidate
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id)
+      .eq('role', 'candidate');
+
+    if (error) {
+      console.error('Delete candidate error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to delete candidate' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'Candidate deleted successfully',
+        deletedId: id
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Delete candidate error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
+}
+
+async function handleUpdateUserRole(userId: string, body: any, headers: any, supabase: any) {
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    const { role } = body;
+
+    if (!role || !['admin', 'candidate'].includes(role)) {
+      return new Response(
+        JSON.stringify({ error: 'Valid role is required (admin or candidate)' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Update user role
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('id', userId)
+      .select('id, email, name, role, created_at')
+      .single();
+
+    if (error || !user) {
+      console.error('Update user role error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to update user role' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'User role updated successfully',
+        user
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Update user role error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
+}
+
+async function handleDeleteUser(userId: string, headers: any, supabase: any) {
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    // Prevent admin from deleting themselves
+    if (decodedToken.userId === userId) {
+      return new Response(
+        JSON.stringify({ error: 'Cannot delete your own account' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+
+    // Delete user
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Delete user error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to delete user' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'User deleted successfully',
+        deletedId: userId
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Delete user error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 // Dashboard handlers
@@ -1453,12 +2376,61 @@ async function handleGetUserDashboard(headers: any, supabase: any) {
       );
     }
 
-    // For now, return basic stats (in production, calculate from database)
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Get user's interviews
+    const { data: interviews, error: interviewsError } = await supabase
+      .from('interviews')
+      .select('*')
+      .eq('candidate_id', userId);
+
+    if (interviewsError) {
+      console.error('Get user interviews error:', interviewsError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch interviews' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    // Calculate stats
+    const totalInterviews = interviews?.length || 0;
+    const completedInterviews = interviews?.filter(i => i.status === 'completed').length || 0;
+    const upcomingInterviews = interviews?.filter(i => i.status === 'scheduled').length || 0;
+
+    // Calculate profile completion
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('name, email, phone, current_position, experience_years, skills')
+      .eq('id', userId)
+      .single();
+
+    let profileCompletion = 0;
+    if (user) {
+      const fields = [user.name, user.email, user.phone, user.current_position, user.experience_years, user.skills];
+      const filledFields = fields.filter(field => field && field.toString().trim() !== '').length;
+      profileCompletion = Math.round((filledFields / fields.length) * 100);
+    }
+
     const stats = {
-      totalInterviews: 0,
-      completedInterviews: 0,
-      upcomingInterviews: 0,
-      profileCompletion: 75
+      totalInterviews,
+      completedInterviews,
+      upcomingInterviews,
+      profileCompletion
     };
 
     return new Response(
@@ -1495,13 +2467,95 @@ async function handleGetAdminDashboard(headers: any, supabase: any) {
       );
     }
 
-    // For now, return basic admin stats (in production, calculate from database)
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    // Get all users count
+    const { count: totalUsers, error: usersError } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true });
+
+    if (usersError) {
+      console.error('Get users count error:', usersError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch users count' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    // Get candidates count
+    const { count: totalCandidates, error: candidatesError } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'candidate');
+
+    if (candidatesError) {
+      console.error('Get candidates count error:', candidatesError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch candidates count' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    // Get all interviews
+    const { data: interviews, error: interviewsError } = await supabase
+      .from('interviews')
+      .select('*');
+
+    if (interviewsError) {
+      console.error('Get interviews error:', interviewsError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch interviews' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    // Calculate interview stats
+    const totalInterviews = interviews?.length || 0;
+    const completedInterviews = interviews?.filter(i => i.status === 'completed').length || 0;
+    const upcomingInterviews = interviews?.filter(i => i.status === 'scheduled').length || 0;
+
     const stats = {
-      totalUsers: 0,
-      totalCandidates: 0,
-      totalInterviews: 0,
-      completedInterviews: 0,
-      upcomingInterviews: 0
+      totalUsers: totalUsers || 0,
+      totalCandidates: totalCandidates || 0,
+      totalInterviews,
+      completedInterviews,
+      upcomingInterviews
     };
 
     return new Response(
@@ -1538,11 +2592,61 @@ async function handleGetAdminInterviews(headers: any, supabase: any) {
       );
     }
 
-    // For now, return empty interviews array (in production, get from database)
-    const interviews = [];
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    // Get all interviews with candidate information
+    const { data: interviews, error } = await supabase
+      .from('interviews')
+      .select(`
+        *,
+        users!interviews_candidate_id_fkey (
+          name,
+          email,
+          phone
+        )
+      `)
+      .order('scheduled_date', { ascending: false });
+
+    if (error) {
+      console.error('Get admin interviews error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch interviews' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
 
     return new Response(
-      JSON.stringify({ interviews }),
+      JSON.stringify({ interviews: interviews || [] }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
