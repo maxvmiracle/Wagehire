@@ -311,7 +311,7 @@ const Dashboard = () => {
                 {isAdmin() ? 'Total Candidates' : 'Today\'s Interviews'}
               </p>
               <p className="text-2xl font-bold text-gray-900 mb-2">
-                {isAdmin() ? (stats?.totalCandidates || 0) : (stats?.today || 0)}
+                {isAdmin() ? (stats?.totalCandidates || 0) : (stats?.todaysInterviews || 0)}
               </p>
               <div className="flex items-center">
                 <Activity className="w-4 h-4 text-blue-600 mr-2 flex-shrink-0" />
@@ -337,7 +337,7 @@ const Dashboard = () => {
                 {isAdmin() ? 'Total Users' : 'Upcoming (7 days)'}
               </p>
               <p className="text-2xl font-bold text-gray-900 mb-2">
-                {isAdmin() ? (stats?.totalUsers || 0) : (stats?.upcoming || 0)}
+                {isAdmin() ? (stats?.totalUsers || 0) : (stats?.upcomingInterviews || 0)}
               </p>
               <div className="flex items-center">
                 <Target className="w-4 h-4 text-warning-600 mr-2 flex-shrink-0" />
@@ -363,7 +363,7 @@ const Dashboard = () => {
                 {isAdmin() ? 'Recent Activity' : 'Completed'}
               </p>
               <p className="text-2xl font-bold text-gray-900 mb-2">
-                {isAdmin() ? (recentInterviews?.length || 0) : (stats?.completed || 0)}
+                {isAdmin() ? (recentInterviews?.length || 0) : (stats?.completedInterviews || 0)}
               </p>
               <div className="flex items-center">
                 <CheckCircle className="w-4 h-4 text-success-600 mr-2 flex-shrink-0" />
