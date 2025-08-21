@@ -175,15 +175,15 @@ const EditInterview = () => {
         
       default:
         // For any other status, require date and time
-      if (!formData.scheduled_date) {
-        newErrors.scheduled_date = 'Please select a date';
-      }
-      if (!formData.scheduled_time) {
-        newErrors.scheduled_time = 'Please select a time';
-      }
-      if (!formData.duration || formData.duration < 15) {
-        newErrors.duration = 'Duration must be at least 15 minutes';
-      }
+        if (!formData.scheduled_date) {
+          newErrors.scheduled_date = 'Please select a date';
+        }
+        if (!formData.scheduled_time) {
+          newErrors.scheduled_time = 'Please select a time';
+        }
+        if (!formData.duration || formData.duration < 15) {
+          newErrors.duration = 'Duration must be at least 15 minutes';
+        }
     }
     
     // Round validation
@@ -294,7 +294,7 @@ const EditInterview = () => {
       if (response.statusChanged) {
         toast.success(`Interview ${response.newStatus} successfully!`);
       } else {
-      toast.success('Interview updated successfully!');
+        toast.success('Interview updated successfully!');
       }
 
       navigate(`/interviews/${id}`);
