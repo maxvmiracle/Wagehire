@@ -5,7 +5,6 @@ import { adminApi } from '../services/api';
 import LoadingScreen from '../components/LoadingScreen';
 import {
   Users,
-  UserCheck,
   Calendar,
   Shield,
   Eye,
@@ -21,7 +20,6 @@ const Admin = () => {
   const { isAdmin } = useAuth();
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
-  const [candidates, setCandidates] = useState([]);
   const [recentInterviews, setRecentInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -203,7 +201,6 @@ const Admin = () => {
             {[
               { id: 'overview', name: 'Overview', icon: BarChart3 },
               { id: 'users', name: 'Users', icon: Users },
-              { id: 'candidates', name: 'Candidates', icon: UserCheck },
               { id: 'interviews', name: 'Interviews', icon: Calendar }
             ].map((tab) => {
               const Icon = tab.icon;
@@ -318,60 +315,7 @@ const Admin = () => {
             </div>
           )}
 
-          {/* Candidates Tab */}
-          {activeTab === 'candidates' && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">All Candidates</h3>
-                <span className="text-sm text-gray-600">{candidates.length} total candidates</span>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Interviews</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {candidates.map((candidate) => (
-                      <tr key={candidate.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{candidate.name}</div>
-                            <div className="text-sm text-gray-500">{candidate.email}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(candidate.status)}`}>
-                            {candidate.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {candidate.created_by_name || 'System'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {candidate.interview_count || 0}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Link
-                            to={`/candidates/${candidate.id}`}
-                            className="text-primary-600 hover:text-primary-700"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+
 
           {/* Interviews Tab */}
           {activeTab === 'interviews' && (
