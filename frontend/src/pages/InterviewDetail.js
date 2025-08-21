@@ -119,40 +119,43 @@ const InterviewDetail = () => {
   return (
     <div className="detail-responsive">
       {/* Header */}
-      <div className="header-responsive">
-        <div className="flex items-center space-x-4">
-          <Link
-            to="/interviews"
-            className="p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200 touch-target"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold text-gray-900 overflow-safe">Interview Details</h1>
-            <p className="text-gray-600 mt-1 overflow-safe text-base">View complete interview information</p>
+      <div className="header-responsive bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Link
+              to="/interviews"
+              className="p-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 touch-target border border-gray-200 hover:border-primary-200"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-bold text-gray-900 overflow-safe">Interview Details</h1>
+              <p className="text-gray-600 mt-1 overflow-safe text-base">View complete interview information</p>
+            </div>
           </div>
-        </div>
-        
-        <div className="flex items-center space-x-3 flex-wrap gap-2">
-          <Link
-            to={`/interviews/${id}/edit`}
-            className="btn btn-secondary flex items-center shadow-sm btn-responsive"
-          >
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Link>
-          <button
-            onClick={handleDeleteInterview}
-            className="btn btn-danger flex items-center shadow-sm btn-responsive"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete
-          </button>
+          
+          <div className="flex items-center space-x-3 flex-wrap gap-2">
+            <Link
+              to={`/interviews/${id}/edit`}
+              className="btn btn-secondary flex items-center shadow-sm btn-responsive"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Link>
+            <button
+              onClick={handleDeleteInterview}
+              className="btn btn-danger flex items-center shadow-sm btn-responsive"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="detail-grid">
+      <div className="bg-gray-50 min-h-screen px-6 py-6">
+        <div className="detail-grid">
         {/* Left Column - Main Info */}
         <div className="detail-main flex flex-col">
           {/* Interview Header Card */}
@@ -436,6 +439,7 @@ const InterviewDetail = () => {
           </div>
         </div>
       </div>
+    </div>
 
       {/* Spacing and Visual Separation */}
       <div className="my-3">
