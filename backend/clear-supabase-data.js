@@ -76,19 +76,19 @@ async function clearSupabaseData() {
   
   // 1. Clear interview_feedback (depends on interviews)
   console.log('📋 Step 1: Clearing interview_feedback table...');
-  results.push(await makeSupabaseRequest('DELETE', '/interview_feedback?not.is=null'));
+  results.push(await makeSupabaseRequest('DELETE', '/interview_feedback?id=gt.0'));
 
   // 2. Clear interviews (depends on users and candidates)
   console.log('📋 Step 2: Clearing interviews table...');
-  results.push(await makeSupabaseRequest('DELETE', '/interviews?not.is=null'));
+  results.push(await makeSupabaseRequest('DELETE', '/interviews?id=gt.0'));
 
   // 3. Clear candidates (depends on users)
   console.log('📋 Step 3: Clearing candidates table...');
-  results.push(await makeSupabaseRequest('DELETE', '/candidates?not.is=null'));
+  results.push(await makeSupabaseRequest('DELETE', '/candidates?id=gt.0'));
 
   // 4. Clear users (base table)
   console.log('📋 Step 4: Clearing users table...');
-  results.push(await makeSupabaseRequest('DELETE', '/users?not.is=null'));
+  results.push(await makeSupabaseRequest('DELETE', '/users?id=gt.0'));
 
   // Summary
   console.log('\n📊 Data Clearing Results');
