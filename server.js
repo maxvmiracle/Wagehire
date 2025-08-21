@@ -31,14 +31,14 @@ const { router: authRoutes } = require('./backend/routes/auth');
 const interviewRoutes = require('./backend/routes/interviews');
 const userRoutes = require('./backend/routes/users');
 const adminRoutes = require('./backend/routes/admin');
-const candidateRoutes = require('./backend/routes/candidates');
+
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/interviews', interviewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/candidates', candidateRoutes);
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

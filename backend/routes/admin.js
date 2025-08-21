@@ -294,4 +294,129 @@ router.get('/interviews', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
+// Get detailed reports (admin only)
+router.get('/reports', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    // Get comprehensive system statistics
+    const totalUsers = await get('SELECT COUNT(*) as count FROM users');
+    const totalInterviews = await get('SELECT COUNT(*) as count FROM interviews');
+    const completedInterviews = await get('SELECT COUNT(*) as count FROM interviews WHERE status = "completed"');
+    const scheduledInterviews = await get('SELECT COUNT(*) as count FROM interviews WHERE status = "scheduled"');
+    const cancelledInterviews = await get('SELECT COUNT(*) as count FROM interviews WHERE status = "cancelled"');
+    
+    // Get user statistics by role
+    const adminUsers = await get('SELECT COUNT(*) as count FROM users WHERE role = "admin"');
+    const regularUsers = await get('SELECT COUNT(*) as count FROM users WHERE role = "user"');
+    
+    // Get new users this month
+    const newUsersThisMonth = await get(`
+      SELECT COUNT(*) as count 
+      FROM users 
+      WHERE created_at >= datetime('now', 'start of month')
+    `);
+    
+    // Get interviews by month (last 6 months)
+    const interviewsByMonth = await all(`
+      SELECT 
+        strftime('%Y-%m', created_at) as month,
+        COUNT(*) as count
+      FROM interviews 
+      WHERE created_at >= datetime('now', '-6 months')
+      GROUP BY month
+      ORDER BY month DESC
+    `);
+    
+    // Get user registration by month (last 6 months)
+    const usersByMonth = await all(`
+      SELECT 
+        strftime('%Y-%m', created_at) as month,
+        COUNT(*) as count
+      FROM users 
+      WHERE created_at >= datetime('now', '-6 months')
+      GROUP BY month
+      ORDER BY month DESC
+    `);
+    
+    // Get top interviewers (users who conducted most interviews)
+    const topInterviewers = await all(`
+      SELECT 
+        u.name,
+        u.email,
+        COUNT(i.id) as interview_count
+      FROM users u
+      JOIN interviews i ON u.id = i.interviewer_id
+      GROUP BY u.id
+      ORDER BY interview_count DESC
+      LIMIT 5
+    `);
+    
+    // Get recent activity (last 30 days)
+    const recentActivity = await all(`
+      SELECT 
+        'interview' as type,
+        i.id,
+        i.company_name,
+        i.job_title,
+        i.status,
+        i.created_at,
+        u.name as candidate_name
+      FROM interviews i
+      JOIN users u ON i.candidate_id = u.id
+      WHERE i.created_at >= datetime('now', '-30 days')
+      UNION ALL
+      SELECT 
+        'user' as type,
+        u.id,
+        u.name as company_name,
+        u.role as job_title,
+        'registered' as status,
+        u.created_at,
+        u.name as candidate_name
+      FROM users u
+      WHERE u.created_at >= datetime('now', '-30 days')
+      ORDER BY created_at DESC
+      LIMIT 20
+    `);
+    
+    // Calculate completion rate
+    const completionRate = totalInterviews.count > 0 
+      ? Math.round((completedInterviews.count / totalInterviews.count) * 100)
+      : 0;
+    
+    // Calculate average interviews per user
+    const avgInterviewsPerUser = totalUsers.count > 0 
+      ? Math.round((totalInterviews.count / totalUsers.count) * 10) / 10
+      : 0;
+    
+    const reports = {
+      summary: {
+        totalUsers: totalUsers.count,
+        totalInterviews: totalInterviews.count,
+        completedInterviews: completedInterviews.count,
+        scheduledInterviews: scheduledInterviews.count,
+        cancelledInterviews: cancelledInterviews.count,
+        adminUsers: adminUsers.count,
+        regularUsers: regularUsers.count,
+        newUsersThisMonth: newUsersThisMonth.count,
+        completionRate,
+        avgInterviewsPerUser
+      },
+      trends: {
+        interviewsByMonth,
+        usersByMonth
+      },
+      analytics: {
+        topInterviewers,
+        recentActivity
+      }
+    };
+    
+    res.json({ reports });
+    
+  } catch (error) {
+    console.error('Get reports error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router; 

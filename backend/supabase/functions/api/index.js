@@ -71,11 +71,6 @@ serve(async (req) => {
       return handleAdminRoutes(path, method, body, headers, supabase)
     }
 
-    // Candidate routes
-    if (path.startsWith('/candidates')) {
-      return handleCandidateRoutes(path, method, body, headers, supabase)
-    }
-
     // 404 for unknown routes
     return new Response(
       JSON.stringify({ error: 'Route not found' }),
@@ -214,44 +209,12 @@ async function handleAdminRoutes(path, method, body, headers, supabase) {
     return handleGetAdminInterviews(headers, supabase)
   }
   
+  if (adminPath === '/reports' && method === 'GET') {
+    return handleGetReports(headers, supabase)
+  }
+  
   return new Response(
     JSON.stringify({ error: 'Admin route not found' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 404 
-    }
-  )
-}
-
-// Candidate routes handler
-async function handleCandidateRoutes(path, method, body, headers, supabase) {
-  const candidatePath = path.replace('/candidates', '')
-  
-  if (candidatePath === '' && method === 'GET') {
-    return handleGetCandidates(headers, supabase)
-  }
-  
-  if (candidatePath === '' && method === 'POST') {
-    return handleCreateCandidate(body, headers, supabase)
-  }
-  
-  if (candidatePath.startsWith('/') && method === 'GET') {
-    const id = candidatePath.substring(1)
-    return handleGetCandidate(id, headers, supabase)
-  }
-  
-  if (candidatePath.startsWith('/') && method === 'PUT') {
-    const id = candidatePath.substring(1)
-    return handleUpdateCandidate(id, body, headers, supabase)
-  }
-  
-  if (candidatePath.startsWith('/') && method === 'DELETE') {
-    const id = candidatePath.substring(1)
-    return handleDeleteCandidate(id, headers, supabase)
-  }
-  
-  return new Response(
-    JSON.stringify({ error: 'Candidate route not found' }),
     { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 404 
@@ -692,7 +655,7 @@ async function handleGetInterviews(headers, supabase) {
 
     if (error) {
       console.error('Get interviews error:', error);
-  return new Response(
+      return new Response(
         JSON.stringify({ error: 'Failed to fetch interviews' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -701,12 +664,23 @@ async function handleGetInterviews(headers, supabase) {
       );
     }
 
+    // Transform the data to flatten candidate information
+    const transformedInterviews = (interviews || []).map(interview => ({
+      ...interview,
+      candidate_name: interview.candidate?.name || 'Unknown Candidate',
+      candidate_email: interview.candidate?.email || 'No email',
+      candidate_phone: interview.candidate?.phone || null,
+      candidate_position: interview.candidate?.current_position || null,
+      candidate_experience: interview.candidate?.experience_years || null,
+      candidate_skills: interview.candidate?.skills || null
+    }));
+
     return new Response(
-      JSON.stringify({ interviews: interviews || [] }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
-    }
+      JSON.stringify({ interviews: transformedInterviews }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
     );
 
   } catch (error) {
@@ -1413,149 +1387,6 @@ async function handleCreateUser(body, headers, supabase) {
   )
 }
 
-async function handleGetCandidates(headers, supabase) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-  return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    const userId = decodedToken.userId;
-
-    // Get user role to determine access
-    const { data: currentUser, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    if (userError || !currentUser) {
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
-    }
-
-    let query = supabase
-      .from('users')
-      .select(`
-        id,
-        email,
-        name,
-        role,
-        phone,
-        resume_url,
-        current_position,
-        experience_years,
-        skills,
-        created_at
-      `)
-      .order('created_at', { ascending: false });
-
-    // If not admin, only show candidates (users with role 'candidate')
-    if (currentUser.role !== 'admin') {
-      query = query.eq('role', 'candidate');
-    }
-
-    const { data: candidates, error } = await query;
-
-    if (error) {
-      console.error('Get candidates error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch candidates' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ candidates: candidates || [] }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
-    }
-    );
-
-  } catch (error) {
-    console.error('Get candidates error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
-}
-
-async function handleCreateCandidate(body, headers, supabase) {
-  // Implement create candidate logic
-  return new Response(
-    JSON.stringify({ message: 'Create candidate endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
-    }
-  )
-}
-
-async function handleGetCandidate(id, headers, supabase) {
-  // Implement get candidate logic
-  return new Response(
-    JSON.stringify({ message: `Get candidate ${id} endpoint - implement your logic here` }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
-    }
-  )
-}
-
-async function handleUpdateCandidate(id, body, headers, supabase) {
-  // Implement update candidate logic
-  return new Response(
-    JSON.stringify({ message: `Update candidate ${id} endpoint - implement your logic here` }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
-    }
-  )
-}
-
-async function handleDeleteCandidate(id, headers, supabase) {
-  // Implement delete candidate logic
-  return new Response(
-    JSON.stringify({ message: `Delete candidate ${id} endpoint - implement your logic here` }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
-    }
-  )
-}
-
 async function handleGetAdminDashboard(headers, supabase) {
   try {
     // Get user token from custom header
@@ -1615,23 +1446,6 @@ async function handleGetAdminDashboard(headers, supabase) {
       );
     }
 
-    // Get candidates count
-    const { count: totalCandidates, error: candidatesError } = await supabase
-      .from('users')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'candidate');
-
-    if (candidatesError) {
-      console.error('Get candidates count error:', candidatesError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch candidates count' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
     // Get all interviews
     const { data: interviews, error: interviewsError } = await supabase
       .from('interviews')
@@ -1672,7 +1486,6 @@ async function handleGetAdminDashboard(headers, supabase) {
 
     const stats = {
       totalUsers: totalUsers || 0,
-      totalCandidates: totalCandidates || 0,
       totalInterviews,
       completedInterviews,
       upcomingInterviews
@@ -1688,6 +1501,139 @@ async function handleGetAdminDashboard(headers, supabase) {
 
   } catch (error) {
     console.error('Get admin dashboard error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
+}
+
+async function handleGetReports(headers, supabase) {
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Check if user is admin
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', decodedToken.userId)
+      .single();
+
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403 
+        }
+      );
+    }
+
+    // Get comprehensive system statistics
+    const { count: totalUsers } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true });
+
+    const { data: interviews } = await supabase
+      .from('interviews')
+      .select('*');
+
+    const { data: users } = await supabase
+      .from('users')
+      .select('*');
+
+    // Calculate statistics
+    const totalInterviews = interviews?.length || 0;
+    const completedInterviews = interviews?.filter(i => i.status === 'completed').length || 0;
+    const scheduledInterviews = interviews?.filter(i => i.status === 'scheduled').length || 0;
+    const cancelledInterviews = interviews?.filter(i => i.status === 'cancelled').length || 0;
+    
+    const adminUsers = users?.filter(u => u.role === 'admin').length || 0;
+    const regularUsers = users?.filter(u => u.role === 'user').length || 0;
+    
+    // Get new users this month
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const newUsersThisMonth = users?.filter(u => {
+      const userDate = new Date(u.created_at);
+      return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
+    }).length || 0;
+    
+    // Calculate completion rate
+    const completionRate = totalInterviews > 0 
+      ? Math.round((completedInterviews / totalInterviews) * 100)
+      : 0;
+    
+    // Calculate average interviews per user
+    const avgInterviewsPerUser = totalUsers > 0 
+      ? Math.round((totalInterviews / totalUsers) * 10) / 10
+      : 0;
+
+    const reports = {
+      summary: {
+        totalUsers: totalUsers || 0,
+        totalInterviews,
+        completedInterviews,
+        scheduledInterviews,
+        cancelledInterviews,
+        adminUsers,
+        regularUsers,
+        newUsersThisMonth,
+        completionRate,
+        avgInterviewsPerUser
+      },
+      trends: {
+        interviewsByMonth: [], // Could be enhanced with actual monthly data
+        usersByMonth: [] // Could be enhanced with actual monthly data
+      },
+      analytics: {
+        topInterviewers: [], // Could be enhanced with actual interviewer data
+        recentActivity: interviews?.slice(0, 10).map(i => ({
+          type: 'interview',
+          id: i.id,
+          company_name: i.company_name,
+          job_title: i.job_title,
+          status: i.status,
+          created_at: i.created_at
+        })) || []
+      }
+    };
+
+    return new Response(
+      JSON.stringify({ reports }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get reports error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 
@@ -1849,10 +1795,13 @@ async function handleGetAdminInterviews(headers, supabase) {
       .from('interviews')
       .select(`
         *,
-        users!interviews_candidate_id_fkey (
+        candidate:users!interviews_candidate_id_fkey (
           name,
           email,
-          phone
+          phone,
+          current_position,
+          experience_years,
+          skills
         )
       `)
       .order('scheduled_date', { ascending: false });
@@ -1868,8 +1817,19 @@ async function handleGetAdminInterviews(headers, supabase) {
       );
     }
 
+    // Transform the data to flatten candidate information
+    const transformedInterviews = (interviews || []).map(interview => ({
+      ...interview,
+      candidate_name: interview.candidate?.name || 'Unknown Candidate',
+      candidate_email: interview.candidate?.email || 'No email',
+      candidate_phone: interview.candidate?.phone || null,
+      candidate_position: interview.candidate?.current_position || null,
+      candidate_experience: interview.candidate?.experience_years || null,
+      candidate_skills: interview.candidate?.skills || null
+    }));
+
     return new Response(
-      JSON.stringify({ interviews: interviews || [] }),
+      JSON.stringify({ interviews: transformedInterviews }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
