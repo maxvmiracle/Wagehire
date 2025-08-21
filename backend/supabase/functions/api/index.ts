@@ -3,103 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-token, X-User-Token',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-}
-
-// JWT Secret (in production, use environment variable)
-const JWT_SECRET = Deno.env.get('JWT_SECRET') || 'your-secret-key';
-
-// Utility functions
-function extractUserToken(headers: any): string | null {
-  // Check for user token in custom header
-  const userToken = headers['x-user-token'] || headers['X-User-Token'];
-  return userToken || null;
-}
-
-function decodeJWT(token: string): any {
-  try {
-    // Simple JWT decoding (in production, use proper JWT library)
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return null;
-    }
-    
-    // Decode the payload (second part)
-    const payload = parts[1];
-    const decoded = JSON.parse(atob(payload));
-    return decoded;
-  } catch (error) {
-    console.error('JWT decode error:', error);
-    return null;
-  }
-}
-
-function validateStrongPassword(password: string) {
-  const errors: string[] = [];
-  
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
-  }
-  
-  if (!/[A-Z]/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
-  }
-  
-  if (!/[a-z]/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
-  }
-  
-  if (!/\d/.test(password)) {
-    errors.push('Password must contain at least one number');
-  }
-  
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-    errors.push('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors: errors
-  };
-}
-
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
-}
-
-async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  const hashedInput = await hashPassword(password);
-  return hashedInput === hashedPassword;
-}
-
-function generateJWT(payload: any): string {
-  const header = {
-    alg: 'HS256',
-    typ: 'JWT'
-  };
-  
-  const now = Math.floor(Date.now() / 1000);
-  const exp = now + (24 * 60 * 60); // 24 hours
-  
-  const jwtPayload = {
-    ...payload,
-    iat: now,
-    exp: exp
-  };
-  
-  const encodedHeader = btoa(JSON.stringify(header));
-  const encodedPayload = btoa(JSON.stringify(jwtPayload));
-  
-  // Simple signature (in production, use proper crypto)
-  const signature = btoa(JWT_SECRET);
-  
-  return `${encodedHeader}.${encodedPayload}.${signature}`;
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req) => {
@@ -109,11 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    console.log('=== REQUEST DEBUG ===');
-    console.log('Request URL:', req.url);
-    console.log('Request method:', req.method);
-    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
-
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://xzndkdqlsllwyygbniht.supabase.co'
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6bmRrZHFsc2xsd3l5Z2JuaWh0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTcwNzY4MywiZXhwIjoyMDcxMjgzNjgzfQ.KQJrEg-zPQdgtHikT3wLO0JkQQV1kx8ngyJBAL-zS8k'
@@ -124,34 +23,16 @@ serve(async (req) => {
     const url = new URL(req.url)
     const path = url.pathname.replace('/functions/v1/api', '').replace('/api', '')
     const method = req.method
-    let body = null;
-    
-    try {
-      // Only parse JSON for POST, PUT, PATCH requests (not GET, DELETE, OPTIONS)
-      if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
-        body = await req.json();
-      }
-    } catch (parseError) {
-      console.error('Error parsing request body:', parseError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-    
+    const body = method !== 'GET' ? await req.json() : null
     const headers = Object.fromEntries(req.headers.entries())
     
-    // Debug logging
-    console.log('Parsed path:', path)
-    console.log('Parsed method:', method)
-    console.log('Request body:', body ? JSON.stringify(body, null, 2) : 'null')
+    console.log('=== REQUEST DEBUG ===');
+    console.log('Request URL:', req.url);
+    console.log('Request method:', method);
+    console.log('Parsed path:', path);
 
     // Health check endpoint
     if (path === '/health' && method === 'GET') {
-      console.log('Health endpoint matched!');
       return new Response(
         JSON.stringify({ status: 'OK', message: 'Wagehire API is running' }),
         { 
@@ -163,36 +44,30 @@ serve(async (req) => {
 
     // Auth routes
     if (path.startsWith('/auth')) {
-      console.log('Handling auth route:', path);
-      return await handleAuthRoutes(path, method, body, headers, supabase)
+      return handleAuthRoutes(path, method, body, headers, supabase)
     }
 
     // Interview routes
     if (path.startsWith('/interviews')) {
-      console.log('Handling interview route:', path);
-      return await handleInterviewRoutes(path, method, body, headers, supabase)
+      return handleInterviewRoutes(path, method, body, headers, supabase)
     }
 
     // User routes
     if (path.startsWith('/users')) {
-      console.log('Handling user route:', path);
-      return await handleUserRoutes(path, method, body, headers, supabase)
+      return handleUserRoutes(path, method, body, headers, supabase)
     }
 
     // Admin routes
     if (path.startsWith('/admin')) {
-      console.log('Handling admin route:', path);
-      return await handleAdminRoutes(path, method, body, headers, supabase)
+      return handleAdminRoutes(path, method, body, headers, supabase)
     }
 
     // Candidate routes
     if (path.startsWith('/candidates')) {
-      console.log('Handling candidate route:', path);
-      return await handleCandidateRoutes(path, method, body, headers, supabase)
+      return handleCandidateRoutes(path, method, body, headers, supabase)
     }
 
     // 404 for unknown routes
-    console.log('Route not found:', path);
     return new Response(
       JSON.stringify({ error: 'Route not found' }),
       { 
@@ -202,16 +77,11 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('=== MAIN ERROR HANDLER ===');
-    console.error('Error type:', typeof error);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    
+    console.error('Error:', error)
     return new Response(
       JSON.stringify({ 
         error: 'Something went wrong!',
-        message: error.message,
-        type: typeof error
+        message: error.message 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -222,7 +92,7 @@ serve(async (req) => {
 })
 
 // Auth routes handler
-async function handleAuthRoutes(path: string, method: string, body: any, headers: any, supabase: any) {
+async function handleAuthRoutes(path, method, body, headers, supabase) {
   const authPath = path.replace('/auth', '')
   
   if (authPath === '/register' && method === 'POST') {
@@ -255,7 +125,7 @@ async function handleAuthRoutes(path: string, method: string, body: any, headers
 }
 
 // Interview routes handler
-async function handleInterviewRoutes(path: string, method: string, body: any, headers: any, supabase: any) {
+async function handleInterviewRoutes(path, method, body, headers, supabase) {
   const interviewPath = path.replace('/interviews', '')
   
   if (interviewPath === '' && method === 'GET') {
@@ -291,7 +161,7 @@ async function handleInterviewRoutes(path: string, method: string, body: any, he
 }
 
 // User routes handler
-async function handleUserRoutes(path: string, method: string, body: any, headers: any, supabase: any) {
+async function handleUserRoutes(path, method, body, headers, supabase) {
   const userPath = path.replace('/users', '')
   
   if (userPath === '/profile' && method === 'GET') {
@@ -300,10 +170,6 @@ async function handleUserRoutes(path: string, method: string, body: any, headers
   
   if (userPath === '/profile' && method === 'PUT') {
     return handleUpdateProfile(body, headers, supabase)
-  }
-  
-  if (userPath === '/me/dashboard' && method === 'GET') {
-    return handleGetUserDashboard(headers, supabase)
   }
   
   return new Response(
@@ -316,7 +182,7 @@ async function handleUserRoutes(path: string, method: string, body: any, headers
 }
 
 // Admin routes handler
-async function handleAdminRoutes(path: string, method: string, body: any, headers: any, supabase: any) {
+async function handleAdminRoutes(path, method, body, headers, supabase) {
   const adminPath = path.replace('/admin', '')
   
   if (adminPath === '/users' && method === 'GET') {
@@ -325,16 +191,6 @@ async function handleAdminRoutes(path: string, method: string, body: any, header
   
   if (adminPath === '/users' && method === 'POST') {
     return handleCreateUser(body, headers, supabase)
-  }
-  
-  if (adminPath.startsWith('/users/') && adminPath.endsWith('/role') && method === 'PUT') {
-    const userId = adminPath.replace('/users/', '').replace('/role', '')
-    return handleUpdateUserRole(userId, body, headers, supabase)
-  }
-  
-  if (adminPath.startsWith('/users/') && method === 'DELETE') {
-    const userId = adminPath.replace('/users/', '')
-    return handleDeleteUser(userId, headers, supabase)
   }
   
   if (adminPath === '/dashboard' && method === 'GET') {
@@ -355,7 +211,7 @@ async function handleAdminRoutes(path: string, method: string, body: any, header
 }
 
 // Candidate routes handler
-async function handleCandidateRoutes(path: string, method: string, body: any, headers: any, supabase: any) {
+async function handleCandidateRoutes(path, method, body, headers, supabase) {
   const candidatePath = path.replace('/candidates', '')
   
   if (candidatePath === '' && method === 'GET') {
@@ -390,8 +246,100 @@ async function handleCandidateRoutes(path: string, method: string, body: any, he
   )
 }
 
+// Utility functions
+function extractUserToken(headers) {
+  // Check for user token in custom header
+  const userToken = headers['x-user-token'] || headers['X-User-Token'];
+  return userToken || null;
+}
+
+function decodeJWT(token) {
+  try {
+    // Simple JWT decoding (in production, use proper JWT library)
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    
+    // Decode the payload (second part)
+    const payload = parts[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded;
+  } catch (error) {
+    console.error('JWT decode error:', error);
+    return null;
+  }
+}
+
+function validateStrongPassword(password) {
+  const errors = [];
+  
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  
+  if (!/\d/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors: errors
+  };
+}
+
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+async function verifyPassword(password, hashedPassword) {
+  const hashedInput = await hashPassword(password);
+  return hashedInput === hashedPassword;
+}
+
+function generateJWT(payload) {
+  const header = {
+    alg: 'HS256',
+    typ: 'JWT'
+  };
+  
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + (24 * 60 * 60); // 24 hours
+  
+  const jwtPayload = {
+    ...payload,
+    iat: now,
+    exp: exp
+  };
+  
+  const encodedHeader = btoa(JSON.stringify(header));
+  const encodedPayload = btoa(JSON.stringify(jwtPayload));
+  
+  // Simple signature (in production, use proper crypto)
+  const signature = btoa('your-secret-key');
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
 // Authentication handlers
-async function handleRegister(body: any, supabase: any) {
+async function handleRegister(body, supabase) {
   try {
     const { 
       email, 
@@ -470,7 +418,7 @@ async function handleRegister(body: any, supabase: any) {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Prepare user data, converting empty strings to null for optional fields
+    // Prepare user data
     const userData = {
       email,
       password: hashedPassword,
@@ -530,7 +478,7 @@ async function handleRegister(body: any, supabase: any) {
   }
 }
 
-async function handleLogin(body: any, supabase: any) {
+async function handleLogin(body, supabase) {
   try {
     const { email, password } = body;
 
@@ -607,7 +555,7 @@ async function handleLogin(body: any, supabase: any) {
   }
 }
 
-async function handleVerifyEmail(body: any, supabase: any) {
+async function handleVerifyEmail(body, supabase) {
   // Implement email verification logic
   return new Response(
     JSON.stringify({ message: 'Email verification endpoint - implement your logic here' }),
@@ -618,7 +566,7 @@ async function handleVerifyEmail(body: any, supabase: any) {
   )
 }
 
-async function handleForgotPassword(body: any, supabase: any) {
+async function handleForgotPassword(body, supabase) {
   // Implement forgot password logic
   return new Response(
     JSON.stringify({ message: 'Forgot password endpoint - implement your logic here' }),
@@ -629,7 +577,7 @@ async function handleForgotPassword(body: any, supabase: any) {
   )
 }
 
-async function handleResetPassword(body: any, supabase: any) {
+async function handleResetPassword(body, supabase) {
   // Implement reset password logic
   return new Response(
     JSON.stringify({ message: 'Reset password endpoint - implement your logic here' }),
@@ -640,738 +588,84 @@ async function handleResetPassword(body: any, supabase: any) {
   )
 }
 
-async function handleGetInterviews(headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
+async function handleGetInterviews(headers, supabase) {
+  // Implement get interviews logic
+  return new Response(
+    JSON.stringify({ message: 'Get interviews endpoint - implement your logic here' }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // For now, get all interviews (in production, filter by user role)
-    const { data: interviews, error } = await supabase
-      .from('interviews')
-      .select(`
-        *,
-        users!interviews_candidate_id_fkey (
-          name,
-          email
-        )
-      `)
-      .order('scheduled_date', { ascending: false });
-
-    if (error) {
-      console.error('Get interviews error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch interviews' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ interviews }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Get interviews error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleCreateInterview(body: any, headers: any, supabase: any) {
-  try {
-    console.log('=== CREATE INTERVIEW DEBUG ===');
-    console.log('Request body:', JSON.stringify(body, null, 2));
-    console.log('Headers:', JSON.stringify(headers, null, 2));
-
-    const {
-      candidate_id,
-      company_name,
-      job_title,
-      scheduled_date,
-      duration = 60,
-      status = 'scheduled',
-      round = 1,
-      interview_type = 'technical',
-      location,
-      notes,
-      company_website,
-      company_linkedin_url,
-      other_urls,
-      job_description,
-      salary_range,
-      interviewer_name,
-      interviewer_email,
-      interviewer_position,
-      interviewer_linkedin_url
-    } = body;
-
-    console.log('Extracted data:', {
-      candidate_id,
-      company_name,
-      job_title,
-      scheduled_date,
-      duration,
-      status,
-      round,
-      interview_type
-    });
-
-    // Validate required fields
-    if (!candidate_id || !company_name || !job_title) {
-      console.log('Validation failed - missing required fields');
-      return new Response(
-        JSON.stringify({ error: 'Candidate ID, company name, and job title are required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
+async function handleCreateInterview(body, headers, supabase) {
+  // Implement create interview logic
+  return new Response(
+    JSON.stringify({ message: 'Create interview endpoint - implement your logic here' }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Prepare insert data
-    const insertData = {
-      candidate_id,
-      company_name,
-      job_title,
-      scheduled_date,
-      duration,
-      status,
-      round,
-      interview_type,
-      location,
-      notes,
-      company_website,
-      company_linkedin_url,
-      other_urls,
-      job_description,
-      salary_range,
-      interviewer_name,
-      interviewer_email,
-      interviewer_position,
-      interviewer_linkedin_url
-    };
-
-    console.log('Insert data:', JSON.stringify(insertData, null, 2));
-
-    // Insert new interview
-    console.log('Attempting to insert interview...');
-    const { data: interview, error } = await supabase
-      .from('interviews')
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Create interview error:', error);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to create interview',
-          details: error.message,
-          code: error.code
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    console.log('Interview created successfully:', interview);
-
-    return new Response(
-      JSON.stringify({
-        message: 'Interview created successfully',
-        interview
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 201 
-      }
-    );
-
-  } catch (error) {
-    console.error('Create interview error:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        message: error.message,
-        stack: error.stack
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleGetInterview(id: string, headers: any, supabase: any) {
-  try {
-    const { data: interview, error } = await supabase
-      .from('interviews')
-      .select(`
-        *,
-        users!interviews_candidate_id_fkey (
-          name,
-          email,
-          phone,
-          resume_url
-        )
-      `)
-      .eq('id', id)
-      .single();
-
-    if (error || !interview) {
-      return new Response(
-        JSON.stringify({ error: 'Interview not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
+async function handleGetInterview(id, headers, supabase) {
+  // Implement get interview logic
+  return new Response(
+    JSON.stringify({ message: `Get interview ${id} endpoint - implement your logic here` }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    return new Response(
-      JSON.stringify({ interview }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Get interview error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleUpdateInterview(id: string, body: any, headers: any, supabase: any) {
-  try {
-    console.log('=== UPDATE INTERVIEW DEBUG ===');
-    console.log('Interview ID:', id);
-    console.log('Update data:', JSON.stringify(body, null, 2));
-    console.log('Headers:', JSON.stringify(headers, null, 2));
-
-    // Validate required fields
-    if (!id) {
-      return new Response(
-        JSON.stringify({ error: 'Interview ID is required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
+async function handleUpdateInterview(id, body, headers, supabase) {
+  // Implement update interview logic
+  return new Response(
+    JSON.stringify({ message: `Update interview ${id} endpoint - implement your logic here` }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Check if interview exists and get current data
-    const { data: existingInterview, error: checkError } = await supabase
-      .from('interviews')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (checkError || !existingInterview) {
-      console.error('Interview not found:', checkError);
-      return new Response(
-        JSON.stringify({ error: 'Interview not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
-    }
-
-    console.log('Current interview data:', existingInterview);
-
-    // Validate and process update data
-    const updateData = { ...body };
-    
-    // Remove any fields that don't exist in the database schema
-    const validFields = [
-      'candidate_id', 'company_name', 'job_title', 'scheduled_date', 'duration',
-      'status', 'round', 'interview_type', 'location', 'notes', 'company_website',
-      'company_linkedin_url', 'other_urls', 'job_description', 'salary_range',
-      'interviewer_name', 'interviewer_email', 'interviewer_position', 'interviewer_linkedin_url'
-    ];
-    
-    // Filter out invalid fields
-    const filteredUpdateData = {};
-    for (const [key, value] of Object.entries(updateData)) {
-      if (validFields.includes(key)) {
-        filteredUpdateData[key] = value;
-      } else {
-        console.log(`Filtering out invalid field: ${key}`);
-      }
-    }
-    
-    // Handle status changes and related field updates
-    const newStatus = filteredUpdateData.status;
-    const oldStatus = existingInterview.status;
-    
-    console.log(`Status change: ${oldStatus} -> ${newStatus}`);
-
-    // Status-specific validations and field adjustments
-    if (newStatus === 'uncertain') {
-      // For uncertain status, clear scheduled date and duration
-      updateData.scheduled_date = null;
-      updateData.duration = null;
-      console.log('Status changed to uncertain - cleared scheduled_date and duration');
-    } else if (newStatus === 'completed') {
-      // For completed status, ensure we have a scheduled date
-      if (!updateData.scheduled_date && !existingInterview.scheduled_date) {
-        return new Response(
-          JSON.stringify({ error: 'Scheduled date is required for completed interviews' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
-      }
-      console.log('Status changed to completed');
-    } else if (newStatus === 'cancelled') {
-      // For cancelled status, we can keep the scheduled date for reference
-      console.log('Status changed to cancelled');
-    } else if (newStatus === 'scheduled' || newStatus === 'confirmed') {
-      // For scheduled/confirmed status, ensure we have required fields
-      if (!updateData.scheduled_date && !existingInterview.scheduled_date) {
-        return new Response(
-          JSON.stringify({ error: 'Scheduled date is required for scheduled/confirmed interviews' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
-      }
-      if (!updateData.duration && !existingInterview.duration) {
-        updateData.duration = 60; // Default duration
-      }
-      console.log('Status changed to scheduled/confirmed');
-    }
-
-    // Validate required fields based on status
-    if (!filteredUpdateData.company_name && !existingInterview.company_name) {
-      return new Response(
-        JSON.stringify({ error: 'Company name is required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    if (!filteredUpdateData.job_title && !existingInterview.job_title) {
-      return new Response(
-        JSON.stringify({ error: 'Job title is required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Validate date format if provided
-    if (filteredUpdateData.scheduled_date) {
-      const date = new Date(filteredUpdateData.scheduled_date);
-      if (isNaN(date.getTime())) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid scheduled date format' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
-      }
-    }
-
-    // Validate duration if provided
-    if (filteredUpdateData.duration !== null && filteredUpdateData.duration !== undefined) {
-      const duration = parseInt(filteredUpdateData.duration);
-      if (isNaN(duration) || duration < 15 || duration > 480) {
-        return new Response(
-          JSON.stringify({ error: 'Duration must be between 15 and 480 minutes' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
-      }
-      filteredUpdateData.duration = duration;
-    }
-
-    // Validate round if provided
-    if (filteredUpdateData.round !== null && filteredUpdateData.round !== undefined) {
-      const round = parseInt(filteredUpdateData.round);
-      if (isNaN(round) || round < 1 || round > 10) {
-        return new Response(
-          JSON.stringify({ error: 'Round must be between 1 and 10' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
-      }
-      filteredUpdateData.round = round;
-    }
-
-    // Validate notes length
-    if (filteredUpdateData.notes && filteredUpdateData.notes.length > 1000) {
-      return new Response(
-        JSON.stringify({ error: 'Notes must be less than 1000 characters' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Validate URLs if provided
-    const urlFields = ['company_website', 'company_linkedin_url', 'other_urls', 'interviewer_linkedin_url'];
-    for (const field of urlFields) {
-      if (filteredUpdateData[field] && filteredUpdateData[field].trim() !== '') {
-        try {
-          new URL(filteredUpdateData[field]);
-        } catch {
-          return new Response(
-            JSON.stringify({ error: `Invalid URL format for ${field.replace(/_/g, ' ')}` }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 400 
-            }
-          );
-        }
-      }
-    }
-
-    // Validate email if provided
-    if (filteredUpdateData.interviewer_email && filteredUpdateData.interviewer_email.trim() !== '') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(filteredUpdateData.interviewer_email)) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid interviewer email format' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
-        );
-      }
-    }
-
-    console.log('Processed update data:', filteredUpdateData);
-
-    // Update the interview
-    const { data: interview, error } = await supabase
-      .from('interviews')
-      .update(filteredUpdateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Update interview error:', error);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to update interview',
-          details: error.message,
-          code: error.code
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    console.log('Interview updated successfully:', interview);
-
-    // Prepare response message based on status change
-    let message = 'Interview updated successfully';
-    if (oldStatus !== newStatus) {
-      message = `Interview ${newStatus} successfully`;
-    }
-
-    return new Response(
-      JSON.stringify({
-        message: message,
-        interview,
-        statusChanged: oldStatus !== newStatus,
-        oldStatus,
-        newStatus
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Update interview error:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        message: error.message,
-        stack: error.stack
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleDeleteInterview(id: string, headers: any, supabase: any) {
-  try {
-    console.log('=== DELETE INTERVIEW DEBUG ===');
-    console.log('Interview ID:', id);
-    console.log('Headers:', JSON.stringify(headers, null, 2));
-
-    // Validate required fields
-    if (!id) {
-      return new Response(
-        JSON.stringify({ error: 'Interview ID is required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
+async function handleDeleteInterview(id, headers, supabase) {
+  // Implement delete interview logic
+  return new Response(
+    JSON.stringify({ message: `Delete interview ${id} endpoint - implement your logic here` }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Check if interview exists
-    const { data: existingInterview, error: checkError } = await supabase
-      .from('interviews')
-      .select('id, candidate_id')
-      .eq('id', id)
-      .single();
-
-    if (checkError || !existingInterview) {
-      console.error('Interview not found:', checkError);
-      return new Response(
-        JSON.stringify({ error: 'Interview not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
-    }
-
-    console.log('Interview found, proceeding with deletion...');
-
-    // Optional: Check if user has permission to delete this interview
-    // For now, we'll allow deletion if the interview exists
-    // In a production system, you might want to check if the user owns the interview
-
-    // Delete the interview
-    const { error } = await supabase
-      .from('interviews')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Delete interview error:', error);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to delete interview',
-          details: error.message,
-          code: error.code
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    console.log('Interview deleted successfully');
-
-    return new Response(
-      JSON.stringify({
-        message: 'Interview deleted successfully',
-        deletedId: id
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Delete interview error:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        message: error.message,
-        stack: error.stack
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleGetProfile(headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
+async function handleGetProfile(headers, supabase) {
+  // Implement get profile logic
+  return new Response(
+    JSON.stringify({ message: 'Get profile endpoint - implement your logic here' }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    const userId = decodedToken.userId;
-
-    // Get user profile by ID
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at')
-      .eq('id', userId)
-      .single();
-
-    if (error || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Profile not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ user }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Get profile error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleUpdateProfile(body: any, headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
+async function handleUpdateProfile(body, headers, supabase) {
+  // Implement update profile logic
+  return new Response(
+    JSON.stringify({ message: 'Update profile endpoint - implement your logic here' }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    const userId = decodedToken.userId;
-    const updateData = body; // Use the entire body as update data
-
-    const { data: user, error } = await supabase
-      .from('users')
-      .update(updateData)
-      .eq('id', userId)
-      .select('id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at')
-      .single();
-
-    if (error) {
-      console.error('Update profile error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to update profile' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        message: 'Profile updated successfully',
-        user
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Update profile error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleGetAllUsers(headers: any, supabase: any) {
+async function handleGetAllUsers(headers, supabase) {
   try {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
@@ -1451,1009 +745,73 @@ async function handleGetAllUsers(headers: any, supabase: any) {
   }
 }
 
-async function handleCreateUser(body: any, headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
+async function handleCreateUser(body, headers, supabase) {
+  // Implement create user logic
+  return new Response(
+    JSON.stringify({ message: 'Create user endpoint - implement your logic here' }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Check if user is admin
-    const { data: currentUser, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', decodedToken.userId)
-      .single();
-
-    if (userError || !currentUser || currentUser.role !== 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403 
-        }
-      );
-    }
-
-    const { 
-      email, 
-      password, 
-      name, 
-      role = 'candidate',
-      phone, 
-      current_position, 
-      experience_years, 
-      skills 
-    } = body;
-
-    // Validate required fields
-    if (!email || !password || !name) {
-      return new Response(
-        JSON.stringify({ error: 'Email, password, and name are required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid email format' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Validate strong password
-    const passwordValidation = validateStrongPassword(password);
-    if (!passwordValidation.isValid) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Password does not meet security requirements',
-          passwordErrors: passwordValidation.errors
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single();
-
-    if (existingUser) {
-      return new Response(
-        JSON.stringify({ error: 'User already exists' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Hash password
-    const hashedPassword = await hashPassword(password);
-
-    // Prepare user data
-    const userData = {
-      email,
-      password: hashedPassword,
-      name,
-      role,
-      phone: phone && phone.trim() !== '' ? phone : null,
-      current_position: current_position && current_position.trim() !== '' ? current_position : null,
-      experience_years: experience_years && experience_years !== '' ? parseInt(experience_years, 10) : null,
-      skills: skills && skills.trim() !== '' ? skills : null,
-      email_verified: true
-    };
-
-    // Insert new user
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert(userData)
-      .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
-      .single();
-
-    if (insertError) {
-      console.error('Insert error:', insertError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to create user' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        message: 'User created successfully',
-        user: newUser
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 201 
-      }
-    );
-
-  } catch (error) {
-    console.error('Create user error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleGetCandidates(headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
+async function handleGetCandidates(headers, supabase) {
+  // Implement get candidates logic
+  return new Response(
+    JSON.stringify({ message: 'Get candidates endpoint - implement your logic here' }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Check if user is admin
-    const { data: currentUser, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', decodedToken.userId)
-      .single();
-
-    if (userError || !currentUser) {
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
-    }
-
-    let candidates;
-    let error;
-
-    if (currentUser.role === 'admin') {
-      // Admin can see all candidates
-      const result = await supabase
-        .from('users')
-        .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
-        .eq('role', 'candidate')
-        .order('created_at', { ascending: false });
-      
-      candidates = result.data;
-      error = result.error;
-    } else {
-      // Regular users can only see their own profile
-      const result = await supabase
-        .from('users')
-        .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
-        .eq('id', decodedToken.userId)
-        .eq('role', 'candidate')
-        .single();
-      
-      candidates = result.data ? [result.data] : [];
-      error = result.error;
-    }
-
-    if (error) {
-      console.error('Get candidates error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch candidates' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ candidates }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Get candidates error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleCreateCandidate(body: any, headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
+async function handleCreateCandidate(body, headers, supabase) {
+  // Implement create candidate logic
+  return new Response(
+    JSON.stringify({ message: 'Create candidate endpoint - implement your logic here' }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Check if user is admin
-    const { data: currentUser, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', decodedToken.userId)
-      .single();
-
-    if (userError || !currentUser || currentUser.role !== 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403 
-        }
-      );
-    }
-
-    const { 
-      email, 
-      password, 
-      name, 
-      phone, 
-      current_position, 
-      experience_years, 
-      skills 
-    } = body;
-
-    // Validate required fields
-    if (!email || !password || !name) {
-      return new Response(
-        JSON.stringify({ error: 'Email, password, and name are required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid email format' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Validate strong password
-    const passwordValidation = validateStrongPassword(password);
-    if (!passwordValidation.isValid) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Password does not meet security requirements',
-          passwordErrors: passwordValidation.errors
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single();
-
-    if (existingUser) {
-      return new Response(
-        JSON.stringify({ error: 'User already exists' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Hash password
-    const hashedPassword = await hashPassword(password);
-
-    // Prepare user data
-    const userData = {
-      email,
-      password: hashedPassword,
-      name,
-      role: 'candidate',
-      phone: phone && phone.trim() !== '' ? phone : null,
-      current_position: current_position && current_position.trim() !== '' ? current_position : null,
-      experience_years: experience_years && experience_years !== '' ? parseInt(experience_years, 10) : null,
-      skills: skills && skills.trim() !== '' ? skills : null,
-      email_verified: true
-    };
-
-    // Insert new candidate
-    const { data: newCandidate, error: insertError } = await supabase
-      .from('users')
-      .insert(userData)
-      .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
-      .single();
-
-    if (insertError) {
-      console.error('Insert error:', insertError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to create candidate' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        message: 'Candidate created successfully',
-        candidate: newCandidate
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 201 
-      }
-    );
-
-  } catch (error) {
-    console.error('Create candidate error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleGetCandidate(id: string, headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
+async function handleGetCandidate(id, headers, supabase) {
+  // Implement get candidate logic
+  return new Response(
+    JSON.stringify({ message: `Get candidate ${id} endpoint - implement your logic here` }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Check if user is admin
-    const { data: currentUser, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', decodedToken.userId)
-      .single();
-
-    if (userError || !currentUser) {
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
-    }
-
-    // Check if user can access this candidate
-    if (currentUser.role !== 'admin' && decodedToken.userId !== id) {
-      return new Response(
-        JSON.stringify({ error: 'Access denied' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403 
-        }
-      );
-    }
-
-    // Get candidate
-    const { data: candidate, error } = await supabase
-      .from('users')
-      .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
-      .eq('id', id)
-      .eq('role', 'candidate')
-      .single();
-
-    if (error || !candidate) {
-      return new Response(
-        JSON.stringify({ error: 'Candidate not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ candidate }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Get candidate error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleUpdateCandidate(id: string, body: any, headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
+async function handleUpdateCandidate(id, body, headers, supabase) {
+  // Implement update candidate logic
+  return new Response(
+    JSON.stringify({ message: `Update candidate ${id} endpoint - implement your logic here` }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Check if user is admin
-    const { data: currentUser, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', decodedToken.userId)
-      .single();
-
-    if (userError || !currentUser) {
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404 
-        }
-      );
-    }
-
-    // Check if user can update this candidate
-    if (currentUser.role !== 'admin' && decodedToken.userId !== id) {
-      return new Response(
-        JSON.stringify({ error: 'Access denied' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403 
-        }
-      );
-    }
-
-    // Prepare update data (exclude sensitive fields)
-    const updateData = {
-      name: body.name,
-      phone: body.phone,
-      current_position: body.current_position,
-      experience_years: body.experience_years ? parseInt(body.experience_years, 10) : null,
-      skills: body.skills
-    };
-
-    // Remove undefined values
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
-      }
-    });
-
-    // Update candidate
-    const { data: candidate, error } = await supabase
-      .from('users')
-      .update(updateData)
-      .eq('id', id)
-      .eq('role', 'candidate')
-      .select('id, email, name, role, phone, current_position, experience_years, skills, email_verified, created_at')
-      .single();
-
-    if (error || !candidate) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to update candidate' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        message: 'Candidate updated successfully',
-        candidate
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Update candidate error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleDeleteCandidate(id: string, headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
+async function handleDeleteCandidate(id, headers, supabase) {
+  // Implement delete candidate logic
+  return new Response(
+    JSON.stringify({ message: `Delete candidate ${id} endpoint - implement your logic here` }),
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
     }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Check if user is admin
-    const { data: currentUser, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', decodedToken.userId)
-      .single();
-
-    if (userError || !currentUser || currentUser.role !== 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403 
-        }
-      );
-    }
-
-    // Delete candidate
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', id)
-      .eq('role', 'candidate');
-
-    if (error) {
-      console.error('Delete candidate error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete candidate' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        message: 'Candidate deleted successfully',
-        deletedId: id
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Delete candidate error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
+  )
 }
 
-async function handleUpdateUserRole(userId: string, body: any, headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Check if user is admin
-    const { data: currentUser, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', decodedToken.userId)
-      .single();
-
-    if (userError || !currentUser || currentUser.role !== 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403 
-        }
-      );
-    }
-
-    const { role } = body;
-
-    if (!role || !['admin', 'candidate'].includes(role)) {
-      return new Response(
-        JSON.stringify({ error: 'Valid role is required (admin or candidate)' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Update user role
-    const { data: user, error } = await supabase
-      .from('users')
-      .update({ role })
-      .eq('id', userId)
-      .select('id, email, name, role, created_at')
-      .single();
-
-    if (error || !user) {
-      console.error('Update user role error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to update user role' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        message: 'User role updated successfully',
-        user
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Update user role error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
-}
-
-async function handleDeleteUser(userId: string, headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Check if user is admin
-    const { data: currentUser, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', decodedToken.userId)
-      .single();
-
-    if (userError || !currentUser || currentUser.role !== 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403 
-        }
-      );
-    }
-
-    // Prevent admin from deleting themselves
-    if (decodedToken.userId === userId) {
-      return new Response(
-        JSON.stringify({ error: 'Cannot delete your own account' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-
-    // Delete user
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', userId);
-
-    if (error) {
-      console.error('Delete user error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete user' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({
-        message: 'User deleted successfully',
-        deletedId: userId
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Delete user error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
-}
-
-// Dashboard handlers
-async function handleGetUserDashboard(headers: any, supabase: any) {
-  try {
-    // Get user token from custom header
-    const userToken = extractUserToken(headers);
-    if (!userToken) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    // Extract user ID from JWT token
-    const decodedToken = decodeJWT(userToken);
-    if (!decodedToken || !decodedToken.userId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401 
-        }
-      );
-    }
-
-    const userId = decodedToken.userId;
-
-    // Get user's interviews
-    const { data: interviews, error: interviewsError } = await supabase
-      .from('interviews')
-      .select('*')
-      .eq('candidate_id', userId);
-
-    if (interviewsError) {
-      console.error('Get user interviews error:', interviewsError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch interviews' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
-        }
-      );
-    }
-
-    // Calculate stats
-    const totalInterviews = interviews?.length || 0;
-    const completedInterviews = interviews?.filter(i => i.status === 'completed').length || 0;
-    const upcomingInterviews = interviews?.filter(i => i.status === 'scheduled').length || 0;
-
-    // Calculate profile completion
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('name, email, phone, current_position, experience_years, skills')
-      .eq('id', userId)
-      .single();
-
-    let profileCompletion = 0;
-    if (user) {
-      const fields = [user.name, user.email, user.phone, user.current_position, user.experience_years, user.skills];
-      const filledFields = fields.filter(field => field && field.toString().trim() !== '').length;
-      profileCompletion = Math.round((filledFields / fields.length) * 100);
-    }
-
-    const stats = {
-      totalInterviews,
-      completedInterviews,
-      upcomingInterviews,
-      profileCompletion
-    };
-
-    return new Response(
-      JSON.stringify({ stats }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
-
-  } catch (error) {
-    console.error('Get user dashboard error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
-    );
-  }
-}
-
-async function handleGetAdminDashboard(headers: any, supabase: any) {
+async function handleGetAdminDashboard(headers, supabase) {
   try {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
@@ -2578,7 +936,7 @@ async function handleGetAdminDashboard(headers: any, supabase: any) {
   }
 }
 
-async function handleGetAdminInterviews(headers: any, supabase: any) {
+async function handleGetAdminInterviews(headers, supabase) {
   try {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
