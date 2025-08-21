@@ -11,13 +11,13 @@ import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
 import Dashboard from './pages/Dashboard';
 import Interviews from './pages/Interviews';
-import Candidates from './pages/Candidates';
+
 import Users from './pages/Users';
 import InterviewDetail from './pages/InterviewDetail';
 import EditInterview from './pages/EditInterview';
-import CandidateDetail from './pages/CandidateDetail';
+
 import ScheduleInterview from './pages/ScheduleInterview';
-import AddCandidate from './pages/AddCandidate';
+
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 
@@ -103,9 +103,7 @@ function App() {
           <Route path="interviews/:id" element={<InterviewDetail />} />
           <Route path="interviews/:id/edit" element={<EditInterview />} />
           <Route path="interviews/schedule/new" element={<ScheduleInterview />} />
-          <Route path="candidates" element={<Candidates />} />
-          <Route path="candidates/:id" element={<CandidateDetail />} />
-          <Route path="candidates/add/new" element={<AddCandidate />} />
+
           <Route path="users" element={<Users />} />
           <Route path="profile" element={<Profile />} />
           

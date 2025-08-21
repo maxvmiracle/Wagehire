@@ -308,24 +308,20 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-600 mb-2 overflow-safe">
-                {isAdmin() ? 'Total Candidates' : 'Today\'s Interviews'}
+                Today's Interviews
               </p>
               <p className="text-2xl font-bold text-gray-900 mb-2">
-                {isAdmin() ? (stats?.totalCandidates || 0) : (stats?.todaysInterviews || 0)}
+                {stats?.todaysInterviews || 0}
               </p>
               <div className="flex items-center">
                 <Activity className="w-4 h-4 text-blue-600 mr-2 flex-shrink-0" />
                 <span className="text-sm text-blue-600 font-medium overflow-safe">
-                  {isAdmin() ? 'Active candidates' : 'Active today'}
+                  Active today
                 </span>
               </div>
             </div>
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-              {isAdmin() ? (
-                <Users className="w-6 h-6 text-white" />
-              ) : (
-                <Clock className="w-6 h-6 text-white" />
-              )}
+              <Clock className="w-6 h-6 text-white" />
             </div>
           </div>
         </div>

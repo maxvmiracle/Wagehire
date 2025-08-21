@@ -150,7 +150,7 @@ export const AuthProvider = ({ children }) => {
     isCandidate: () => user?.role === 'candidate',
     hasRole: (role) => user?.role === role,
     // Permission helper functions
-    canManageAllCandidates: () => user?.role === 'admin',
+
     canManageAllUsers: () => user?.role === 'admin',
     canManageAllInterviews: () => user?.role === 'admin',
     canManageOwnProfile: () => !!user, // All authenticated users can manage their own profile

@@ -169,38 +169,7 @@ export const interviewApi = {
   },
 };
 
-// Candidate APIs
-export const candidateApi = {
-  // Get all candidates
-  getAll: async () => {
-    const response = await api.get('/candidates');
-    return response.data;
-  },
 
-  // Get single candidate by ID
-  getById: async (id) => {
-    const response = await api.get(`/candidates/${id}`);
-    return response.data;
-  },
-
-  // Create new candidate
-  create: async (candidateData) => {
-    const response = await api.post('/candidates', candidateData);
-    return response.data;
-  },
-
-  // Update candidate
-  update: async (id, updateData) => {
-    const response = await api.put(`/candidates/${id}`, updateData);
-    return response.data;
-  },
-
-  // Delete candidate
-  delete: async (id) => {
-    const response = await api.delete(`/candidates/${id}`);
-    return response.data;
-  },
-};
 
 // User APIs
 export const userApi = {

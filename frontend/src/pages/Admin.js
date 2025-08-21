@@ -157,17 +157,7 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg border-0 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Total Candidates</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.totalCandidates || 0}</p>
-            </div>
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-              <UserCheck className="w-5 h-5 text-white" />
-            </div>
-          </div>
-        </div>
+
 
         <div className="bg-white rounded-xl shadow-lg border-0 p-6">
           <div className="flex items-center justify-between">
