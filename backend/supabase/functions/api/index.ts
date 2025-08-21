@@ -181,6 +181,10 @@ async function handleUserRoutes(path, method, body, headers, supabase) {
     return handleUpdateProfile(body, headers, supabase)
   }
   
+  if (userPath === '/me/dashboard' && method === 'GET') {
+    return handleGetUserDashboard(headers, supabase)
+  }
+  
   return new Response(
     JSON.stringify({ error: 'User route not found' }),
     { 
@@ -1667,6 +1671,94 @@ async function handleGetAdminDashboard(headers, supabase) {
 
   } catch (error) {
     console.error('Get admin dashboard error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
+}
+
+async function handleGetUserDashboard(headers, supabase) {
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Get user's interviews
+    const { data: interviews, error: interviewsError } = await supabase
+      .from('interviews')
+      .select('*')
+      .eq('candidate_id', userId);
+
+    if (interviewsError) {
+      console.error('Get user interviews error:', interviewsError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch interviews' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    // Calculate interview stats for the user
+    const totalInterviews = interviews?.length || 0;
+    const completedInterviews = interviews?.filter(i => i.status === 'completed').length || 0;
+    const upcomingInterviews = interviews?.filter(i => i.status === 'scheduled').length || 0;
+    
+    // Calculate today's interviews
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    
+    const todaysInterviews = interviews?.filter(i => {
+      if (!i.scheduled_date) return false;
+      const interviewDate = new Date(i.scheduled_date);
+      return interviewDate >= todayStart && interviewDate < todayEnd;
+    }).length || 0;
+
+    const stats = {
+      totalInterviews,
+      completedInterviews,
+      upcomingInterviews,
+      todaysInterviews
+    };
+
+    return new Response(
+      JSON.stringify({ stats }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get user dashboard error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 
