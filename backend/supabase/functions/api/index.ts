@@ -738,7 +738,7 @@ async function handleCreateInterview(body, headers, supabase) {
     const userId = decodedToken.userId;
 
     // Validate required fields
-    const requiredFields = ['company_name', 'job_title', 'scheduled_date', 'scheduled_time'];
+    const requiredFields = ['company_name', 'job_title'];
     for (const field of requiredFields) {
       if (!body[field]) {
         return new Response(
@@ -754,10 +754,16 @@ async function handleCreateInterview(body, headers, supabase) {
     // Create interview data
     const { scheduled_time, ...bodyWithoutTime } = body;
     
-    // Combine date and time into a single timestamp
+    // Handle scheduled_date - it might already be a timestamp or need to be combined
     let scheduledDateTime = null;
-    if (body.scheduled_date && body.scheduled_time) {
-      scheduledDateTime = new Date(`${body.scheduled_date}T${body.scheduled_time}`).toISOString();
+    if (body.scheduled_date) {
+      if (body.scheduled_time) {
+        // If both date and time are provided separately, combine them
+        scheduledDateTime = new Date(`${body.scheduled_date}T${body.scheduled_time}`).toISOString();
+      } else {
+        // If scheduled_date is already a timestamp, use it as is
+        scheduledDateTime = body.scheduled_date;
+      }
     }
     
     const interviewData = {
