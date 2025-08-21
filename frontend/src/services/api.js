@@ -120,9 +120,9 @@ export const interviewApi = {
   create: async (interviewData) => {
     try {
       console.log('API: Creating interview with data:', interviewData);
-      const response = await api.post('/interviews', interviewData);
+    const response = await api.post('/interviews', interviewData);
       console.log('API: Interview creation successful:', response.data);
-      return response.data;
+    return response.data;
     } catch (error) {
       console.error('API: Interview creation failed:', error);
       console.error('API: Error response:', error.response?.data);
@@ -136,9 +136,9 @@ export const interviewApi = {
     try {
       console.log('API: Updating interview with ID:', id);
       console.log('API: Update data:', updateData);
-      const response = await api.put(`/interviews/${id}`, updateData);
+    const response = await api.put(`/interviews/${id}`, updateData);
       console.log('API: Interview update successful:', response.data);
-      return response.data;
+    return response.data;
     } catch (error) {
       console.error('API: Interview update failed:', error);
       console.error('API: Error response:', error.response?.data);
@@ -151,9 +151,9 @@ export const interviewApi = {
   delete: async (id) => {
     try {
       console.log('API: Deleting interview with ID:', id);
-      const response = await api.delete(`/interviews/${id}`);
+    const response = await api.delete(`/interviews/${id}`);
       console.log('API: Interview deletion successful:', response.data);
-      return response.data;
+    return response.data;
     } catch (error) {
       console.error('API: Interview deletion failed:', error);
       console.error('API: Error response:', error.response?.data);
