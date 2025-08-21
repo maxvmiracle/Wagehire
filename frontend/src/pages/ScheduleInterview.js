@@ -212,7 +212,8 @@ const ScheduleInterview = () => {
       // Show enhanced notification for scheduled interview
       notificationService.showInterviewScheduled(response.interview);
       
-      navigate('/interviews');
+      // Navigate to dashboard to show updated stats
+      navigate('/dashboard');
     } catch (error) {
       console.error('=== ERROR DEBUG ===');
       console.error('Error object:', error);

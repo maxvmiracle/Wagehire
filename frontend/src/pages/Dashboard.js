@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import LoadingScreen from '../components/LoadingScreen';
@@ -20,11 +20,13 @@ import {
   BookOpen,
   Shield,
   UserCog,
-  UserX
+  UserX,
+  RefreshCw
 } from 'lucide-react';
 
 const Dashboard = () => {
   const { user, isAdmin } = useAuth();
+  const location = useLocation();
   const [stats, setStats] = useState(null);
   const [recentInterviews, setRecentInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +97,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, [isAdmin, user]);
+  }, [isAdmin, user, location.pathname]);
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -124,6 +126,33 @@ const Dashboard = () => {
   };
 
   const isProfileComplete = profileCompletion === 100;
+
+  // Function to manually refresh dashboard data
+  const refreshDashboard = async () => {
+    setLoading(true);
+    try {
+      let statsResponse, interviewsResponse;
+      
+      if (isAdmin()) {
+        [statsResponse, interviewsResponse] = await Promise.all([
+          api.get('/admin/dashboard'),
+          api.get('/admin/interviews?limit=5')
+        ]);
+      } else {
+        [statsResponse, interviewsResponse] = await Promise.all([
+          api.get('/users/me/dashboard'),
+          api.get('/interviews?limit=5')
+        ]);
+      }
+
+      setStats(statsResponse.data.stats);
+      setRecentInterviews(interviewsResponse.data.interviews);
+    } catch (error) {
+      console.error('Error refreshing dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return <LoadingScreen message="Loading dashboard..." />;
@@ -155,6 +184,15 @@ const Dashboard = () => {
                   <Clock className="w-3 h-3 mr-1.5 flex-shrink-0" />
                   <span className="text-xs overflow-safe">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
+                <button
+                  onClick={refreshDashboard}
+                  disabled={loading}
+                  className="flex items-center p-1 text-blue-100 hover:bg-white hover:bg-opacity-20 rounded transition-colors disabled:opacity-50"
+                  title="Refresh dashboard"
+                >
+                  <RefreshCw className={`w-3 h-3 mr-1.5 flex-shrink-0 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="text-xs">Refresh</span>
+                </button>
                 {isAdmin() && (
                   <div className="flex items-center">
                     <Shield className="w-3 h-3 mr-1.5 flex-shrink-0" />
@@ -176,14 +214,24 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="hidden lg:block flex-shrink-0">
-              <div className="w-20 h-20 bg-white bg-opacity-10 rounded-full flex items-center justify-center">
-                {isAdmin() ? (
-                  <Shield className="w-10 h-10 text-white" />
-                ) : isProfileComplete ? (
-                  <UserCheck className="w-10 h-10 text-white" />
-                ) : (
-                  <UserX className="w-10 h-10 text-white" />
-                )}
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={refreshDashboard}
+                  disabled={loading}
+                  className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors disabled:opacity-50"
+                  title="Refresh dashboard"
+                >
+                  <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+                <div className="w-20 h-20 bg-white bg-opacity-10 rounded-full flex items-center justify-center">
+                  {isAdmin() ? (
+                    <Shield className="w-10 h-10 text-white" />
+                  ) : isProfileComplete ? (
+                    <UserCheck className="w-10 h-10 text-white" />
+                  ) : (
+                    <UserX className="w-10 h-10 text-white" />
+                  )}
+                </div>
               </div>
             </div>
           </div>
