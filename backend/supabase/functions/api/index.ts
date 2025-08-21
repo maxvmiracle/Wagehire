@@ -24,7 +24,15 @@ serve(async (req) => {
     const url = new URL(req.url)
     const path = url.pathname.replace('/functions/v1/api', '').replace('/api', '')
     const method = req.method
-    const body = method !== 'GET' ? await req.json() : null
+    let body = null;
+    if (method !== 'GET' && method !== 'DELETE') {
+      try {
+        body = await req.json();
+      } catch (error) {
+        console.error('Error parsing request body:', error);
+        body = null;
+      }
+    }
     const headers = Object.fromEntries(req.headers.entries())
     
     console.log('=== REQUEST DEBUG ===');
@@ -827,14 +835,103 @@ async function handleCreateInterview(body, headers, supabase) {
 }
 
 async function handleGetInterview(id, headers, supabase) {
-  // Implement get interview logic
-  return new Response(
-    JSON.stringify({ message: `Get interview ${id} endpoint - implement your logic here` }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Get user role to determine access
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !currentUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    // Get interview by ID with candidate details
+    let query = supabase
+      .from('interviews')
+      .select(`
+        *,
+        candidate:users!interviews_candidate_id_fkey(
+          id,
+          name,
+          email,
+          role,
+          phone,
+          current_position,
+          experience_years,
+          skills
+        )
+      `)
+      .eq('id', id);
+
+    // If not admin, only allow access to user's own interviews
+    if (currentUser.role !== 'admin') {
+      query = query.eq('candidate_id', userId);
+    }
+
+    const { data: interview, error } = await query.single();
+
+    if (error || !interview) {
+      return new Response(
+        JSON.stringify({ error: 'Interview not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ interview }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get interview error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleUpdateInterview(id, body, headers, supabase) {
@@ -849,14 +946,108 @@ async function handleUpdateInterview(id, body, headers, supabase) {
 }
 
 async function handleDeleteInterview(id, headers, supabase) {
-  // Implement delete interview logic
-  return new Response(
-    JSON.stringify({ message: `Delete interview ${id} endpoint - implement your logic here` }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Get user role to determine access
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !currentUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    // Check if interview exists and user has access
+    let query = supabase
+      .from('interviews')
+      .select('id, candidate_id')
+      .eq('id', id);
+
+    // If not admin, only allow access to user's own interviews
+    if (currentUser.role !== 'admin') {
+      query = query.eq('candidate_id', userId);
+    }
+
+    const { data: existingInterview, error: checkError } = await query.single();
+
+    if (checkError || !existingInterview) {
+      return new Response(
+        JSON.stringify({ error: 'Interview not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    // Delete the interview
+    const { error: deleteError } = await supabase
+      .from('interviews')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Delete interview error:', deleteError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to delete interview' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ message: 'Interview deleted successfully' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Delete interview error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleGetProfile(headers, supabase) {

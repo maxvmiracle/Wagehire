@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import api from '../services/api';
+import { interviewApi } from '../services/api';
 import LoadingScreen from '../components/LoadingScreen';
 import {
   ArrowLeft,
@@ -36,8 +36,8 @@ const InterviewDetail = () => {
   const fetchInterviewDetail = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/interviews/${id}`);
-      setInterview(response.data.interview);
+      const response = await interviewApi.getById(id);
+      setInterview(response.interview);
     } catch (error) {
       console.error('Error fetching interview details:', error);
       toast.error('Failed to load interview details');
@@ -57,7 +57,7 @@ const InterviewDetail = () => {
     }
 
     try {
-      await api.delete(`/interviews/${id}`);
+      await interviewApi.delete(id);
       toast.success('Interview deleted successfully');
       navigate('/interviews');
     } catch (error) {
