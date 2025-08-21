@@ -460,21 +460,26 @@ async function handleRegister(body: any, supabase: any) {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
+    // Prepare user data, converting empty strings to null for optional fields
+    const userData = {
+      email,
+      password: hashedPassword,
+      name,
+      role: userRole,
+      phone: phone && phone.trim() !== '' ? phone : null,
+      resume_url: resume_url && resume_url.trim() !== '' ? resume_url : null,
+      current_position: current_position && current_position.trim() !== '' ? current_position : null,
+      experience_years: experience_years && experience_years !== '' ? parseInt(experience_years, 10) : null,
+      skills: skills && skills.trim() !== '' ? skills : null,
+      email_verified: true
+    };
+
+    console.log('Inserting user data:', userData);
+
     // Insert new user
     const { data: newUser, error: insertError } = await supabase
       .from('users')
-      .insert({
-        email,
-        password: hashedPassword,
-        name,
-        role: userRole,
-        phone,
-        resume_url,
-        current_position,
-        experience_years,
-        skills,
-        email_verified: true
-      })
+      .insert(userData)
       .select('id, email, name, role, phone, resume_url, current_position, experience_years, skills, email_verified, created_at')
       .single();
 
