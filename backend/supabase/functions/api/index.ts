@@ -1729,7 +1729,6 @@ async function handleGetUserDashboard(headers, supabase) {
     // Calculate interview stats for the user
     const totalInterviews = interviews?.length || 0;
     const completedInterviews = interviews?.filter(i => i.status === 'completed').length || 0;
-    const upcomingInterviews = interviews?.filter(i => i.status === 'scheduled').length || 0;
     
     // Calculate today's interviews
     const today = new Date();
@@ -1740,6 +1739,16 @@ async function handleGetUserDashboard(headers, supabase) {
       if (!i.scheduled_date) return false;
       const interviewDate = new Date(i.scheduled_date);
       return interviewDate >= todayStart && interviewDate < todayEnd;
+    }).length || 0;
+
+    // Calculate upcoming interviews (next 7 days, excluding today)
+    const nextWeekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const nextWeekEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8);
+    
+    const upcomingInterviews = interviews?.filter(i => {
+      if (!i.scheduled_date) return false;
+      const interviewDate = new Date(i.scheduled_date);
+      return interviewDate >= nextWeekStart && interviewDate < nextWeekEnd;
     }).length || 0;
 
     const stats = {
