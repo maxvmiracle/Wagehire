@@ -80,9 +80,17 @@ export const AuthProvider = ({ children }) => {
       const response = await authApi.register(userData);
       console.log('Registration response:', response);
       
-      const { user: userInfo, emailVerificationSent, requiresVerification } = response;
+      const { user: userInfo, token: newToken, emailVerificationSent, requiresVerification } = response;
       
       console.log('Registration successful, requires verification:', requiresVerification);
+      
+      // Store token and user data if provided
+      if (newToken) {
+        localStorage.setItem('token', newToken);
+        setToken(newToken);
+        setUser(userInfo);
+        console.log('AuthContext - Token stored after registration:', newToken);
+      }
       
       if (requiresVerification) {
         toast.success('Registration successful! Please check your email to verify your account.');
@@ -94,9 +102,9 @@ export const AuthProvider = ({ children }) => {
         };
       }
       
-      // This should not happen with the new flow, but keeping for safety
+      // Auto-login after successful registration
       toast.success('Registration successful! Welcome to Wagehire!');
-      return { success: true };
+      return { success: true, user: userInfo };
     } catch (error) {
       console.error('Registration error:', error);
       const message = error.message || 'Registration failed';

@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-token, X-User-Token',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 }
 
 serve(async (req) => {
@@ -452,10 +453,18 @@ async function handleRegister(body, supabase) {
       );
     }
 
+    // Generate JWT token for immediate login
+    const token = generateJWT({
+      userId: newUser.id,
+      email: newUser.email,
+      role: newUser.role
+    });
+
     return new Response(
       JSON.stringify({
         message: isFirstUser ? 'Admin account created successfully! You can now login.' : 'Registration successful! You can now login.',
         user: newUser,
+        token,
         emailVerificationSent: false,
         requiresVerification: false,
         isAdmin: isFirstUser
@@ -644,25 +653,138 @@ async function handleDeleteInterview(id, headers, supabase) {
 }
 
 async function handleGetProfile(headers, supabase) {
-  // Implement get profile logic
-  return new Response(
-    JSON.stringify({ message: 'Get profile endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Get user profile by ID
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at')
+      .eq('id', userId)
+      .single();
+
+    if (error || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Profile not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ user }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Get profile error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleUpdateProfile(body, headers, supabase) {
-  // Implement update profile logic
-  return new Response(
-    JSON.stringify({ message: 'Update profile endpoint - implement your logic here' }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+    const updateData = body; // Use the entire body as update data
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId)
+      .select('id, email, name, role, phone, resume_url, current_position, experience_years, skills, created_at')
+      .single();
+
+    if (error) {
+      console.error('Update profile error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to update profile' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'Profile updated successfully',
+        user
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleGetAllUsers(headers, supabase) {
