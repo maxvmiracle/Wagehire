@@ -67,8 +67,19 @@ export const AuthProvider = ({ children }) => {
       toast.success('Login successful!');
       return { success: true };
     } catch (error) {
-      const message = error.message || 'Login failed';
+      // Handle email verification requirement
+      if (error.response?.data?.requiresVerification) {
+        const message = error.response.data.error || 'Please verify your email before logging in';
+        toast.error(message);
+        return { 
+          success: false, 
+          error: message,
+          requiresVerification: true,
+          email: error.response.data.email
+        };
+      }
       
+      const message = error.message || 'Login failed';
       toast.error(message);
       return { success: false, error: message };
     }

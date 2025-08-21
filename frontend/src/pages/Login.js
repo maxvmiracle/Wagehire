@@ -20,11 +20,11 @@ const Login = () => {
       const result = await login(email, password);
       if (result.success) {
         navigate('/dashboard');
-      } else if (result.emailNotVerified) {
+      } else if (result.requiresVerification) {
         // Redirect to verification page with email
         navigate('/verify-email', { 
           state: { 
-            email: email,
+            email: result.email || email,
             message: 'Please verify your email address before logging in.'
           }
         });

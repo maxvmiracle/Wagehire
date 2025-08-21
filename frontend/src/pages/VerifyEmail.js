@@ -43,7 +43,7 @@ const VerifyEmail = () => {
       }
 
       try {
-        const response = await api.get(`/auth/verify-email?token=${token}`);
+        const response = await api.post('/auth/verify-email', { token });
         setStatus('success');
         setMessage(response.data.message);
         toast.success('Email verified successfully!');

@@ -387,25 +387,39 @@ function generateVerificationToken(): string {
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-// Send verification email using external email service
+// Import email service
+import { createEmailService, emailTemplates } from './email-service.ts';
+
+// Send verification email using production email service
 async function sendVerificationEmail(email: string, name: string, token: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    // For Supabase Edge Functions, we'll use a simple approach
-    // In production, you might want to use a service like SendGrid, Mailgun, or Resend
+    const emailService = createEmailService();
     
-    const verificationUrl = `https://your-frontend-domain.com/verify-email?token=${token}`;
+    // Create verification URL for production
+    const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://wagehire.vercel.app';
+    const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
     
-    console.log(`📧 Verification email would be sent to: ${email}`);
-    console.log(`🔗 Verification URL: ${verificationUrl}`);
-    console.log(`📋 Token: ${token}`);
+    // Get email template
+    const template = emailTemplates.verification(name, verificationUrl);
     
-    // For now, we'll return success but log the verification details
-    // In a real implementation, you would integrate with an email service
+    // Send email
+    const result = await emailService.sendEmail({
+      to: email,
+      subject: template.subject,
+      html: template.html,
+      text: template.text
+    });
     
-    return {
-      success: true,
-      message: 'Verification email sent successfully'
-    };
+    if (result.success) {
+      console.log(`📧 Verification email sent successfully to: ${email}`);
+      console.log(`🔗 Verification URL: ${verificationUrl}`);
+      console.log(`📋 Message ID: ${result.messageId}`);
+    } else {
+      console.error(`❌ Failed to send verification email to: ${email}`);
+      console.error(`📋 Error: ${result.error}`);
+    }
+    
+    return result;
   } catch (error) {
     console.error('Email sending error:', error);
     return {
