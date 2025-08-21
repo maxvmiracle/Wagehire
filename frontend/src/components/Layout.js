@@ -9,7 +9,6 @@ import {
   User,
   Home,
   CalendarCheck,
-  Users2,
   BarChart3,
   Shield,
   UserCog,
@@ -80,7 +79,6 @@ const Layout = () => {
 
     // Admin-only items
     const adminItems = [
-      { name: 'All Candidates', href: '/candidates', icon: Users2 },
       { name: 'All Users', href: '/users', icon: UserCog },
       { name: 'Admin Panel', href: '/admin', icon: Shield },
       { name: 'Reports', href: '/reports', icon: BarChart3 },
