@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard API Test</h1>
+    
+    <div class="test-section">
+        <h3>Step 1: Register User</h3>
+        <button onclick="registerUser()">Register Test User</button>
+        <div id="registerResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 2: Create Interview for Today</h3>
+        <button onclick="createInterview()" id="createBtn" disabled>Create Interview</button>
+        <div id="createResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 3: Test Dashboard API</h3>
+        <button onclick="testDashboard()" id="dashboardBtn" disabled>Test Dashboard</button>
+        <div id="dashboardResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Current Status</h3>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xzndkdqlsllwyygbniht.supabase.co/functions/v1/api';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6bmRrZHFsc2xsd3l5Z2JuaWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MDc2ODMsImV4cCI6MjA3MTI4MzY4M30.hW0GaAfwNUgsR9_JFgqfi96yP-odqqBc7T6Q2OpxTJQ';
+        
+        let userToken = null;
+
+        function showResult(elementId, message, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<pre>${message}</pre>`;
+            element.className = `test-section ${isSuccess ? 'success' : 'error'}`;
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading">Loading...</div>';
+        }
+
+        async function registerUser() {
+            showLoading('registerResult');
+            
+            try {
+                const email = `test-${Date.now()}@example.com`;
+                const response = await fetch(`${SUPABASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: 'Password123!',
+                        name: 'Test User',
+                        phone: '1234567890',
+                        current_position: 'Developer',
+                        experience_years: '2',
+                        skills: 'JavaScript'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    userToken = data.token;
+                    showResult('registerResult', `✅ Registration successful!\nToken: ${userToken.substring(0, 50)}...`, true);
+                    document.getElementById('createBtn').disabled = false;
+                    updateStatus('User registered successfully');
+                } else {
+                    showResult('registerResult', `❌ Registration failed: ${JSON.stringify(data, null, 2)}`, false);
+                }
+            } catch (error) {
+                showResult('registerResult', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function createInterview() {
+            if (!userToken) {
+                showResult('createResult', '❌ Please register a user first', false);
+                return;
+            }
+
+            showLoading('createResult');
+            
+            try {
+                const today = new Date();
+                const todayString = today.toISOString().split('T')[0];
+                const currentTime = today.toTimeString().split(' ')[0];
+
+                const response = await fetch(`${SUPABASE_URL}/interviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'X-User-Token': userToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        company_name: 'Test Company',
+                        job_title: 'Software Engineer',
+                        scheduled_date: todayString,
+                        scheduled_time: currentTime,
+                        location: 'Remote',
+                        notes: 'Test interview for today'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('createResult', `✅ Interview created successfully!\n${JSON.stringify(data, null, 2)}`, true);
+                    document.getElementById('dashboardBtn').disabled = false;
+                    updateStatus('Interview created for today');
+                } else {
+                    showResult('createResult', `❌ Interview creation failed: ${JSON.stringify(data, null, 2)}`, false);
+                }
+            } catch (error) {
+                showResult('createResult', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function testDashboard() {
+            if (!userToken) {
+                showResult('dashboardResult', '❌ Please register a user first', false);
+                return;
+            }
+
+            showLoading('dashboardResult');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/users/me/dashboard`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'X-User-Token': userToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const stats = data.stats;
+                    const result = `✅ Dashboard API working!\n
+📊 Dashboard Stats:
+• Today's Interviews: ${stats.todaysInterviews}
+• Upcoming (7 days): ${stats.upcomingInterviews}
+• Completed: ${stats.completedInterviews}
+• Total Interviews: ${stats.totalInterviews}
+
+${stats.todaysInterviews > 0 ? '✅ Today\'s interviews showing correctly!' : '❌ Today\'s interviews should show > 0'}
+${stats.upcomingInterviews >= 0 ? '✅ Upcoming interviews working!' : '❌ Upcoming interviews issue'}
+
+Full Response: ${JSON.stringify(data, null, 2)}`;
+                    
+                    showResult('dashboardResult', result, true);
+                    updateStatus(`Dashboard test completed - Today: ${stats.todaysInterviews}, Upcoming: ${stats.upcomingInterviews}`);
+                } else {
+                    showResult('dashboardResult', `❌ Dashboard API failed: ${JSON.stringify(data, null, 2)}`, false);
+                }
+            } catch (error) {
+                showResult('dashboardResult', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').innerHTML = `<strong>Status:</strong> ${message}`;
+        }
+
+        updateStatus('Ready to test');
+    </script>
+</body>
+</html> 
