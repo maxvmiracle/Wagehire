@@ -367,10 +367,10 @@ async function handleRegister(body, supabase) {
 
     // Validate required fields
     if (!email || !password || !name) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Email, password, and name are required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400 
         }
       );
@@ -516,7 +516,7 @@ async function handleLogin(body, supabase) {
     const { email, password } = body;
 
     if (!email || !password) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Email and password are required' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -570,10 +570,10 @@ async function handleLogin(body, supabase) {
         token,
         user: userWithoutPassword
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
     );
 
   } catch (error) {
@@ -626,10 +626,10 @@ async function handleGetInterviews(headers, supabase) {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
     if (!userToken) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
         }
       );
@@ -692,7 +692,7 @@ async function handleGetInterviews(headers, supabase) {
 
     if (error) {
       console.error('Get interviews error:', error);
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Failed to fetch interviews' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -703,10 +703,10 @@ async function handleGetInterviews(headers, supabase) {
 
     return new Response(
       JSON.stringify({ interviews: interviews || [] }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
     );
 
   } catch (error) {
@@ -843,10 +843,10 @@ async function handleGetInterview(id, headers, supabase) {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
     if (!userToken) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Authentication required' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
         }
       );
@@ -909,7 +909,7 @@ async function handleGetInterview(id, headers, supabase) {
     const { data: interview, error } = await query.single();
 
     if (error || !interview) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Interview not found' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -920,10 +920,10 @@ async function handleGetInterview(id, headers, supabase) {
 
       return new Response(
       JSON.stringify({ interview }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-        }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
       );
 
   } catch (error) {
@@ -1087,7 +1087,7 @@ async function handleDeleteInterview(id, headers, supabase) {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
     if (!userToken) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1169,10 +1169,10 @@ async function handleDeleteInterview(id, headers, supabase) {
 
     return new Response(
       JSON.stringify({ message: 'Interview deleted successfully' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
     );
 
   } catch (error) {
@@ -1192,7 +1192,7 @@ async function handleGetProfile(headers, supabase) {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
     if (!userToken) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1234,10 +1234,10 @@ async function handleGetProfile(headers, supabase) {
 
     return new Response(
       JSON.stringify({ user }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
     );
 
   } catch (error) {
@@ -1257,7 +1257,7 @@ async function handleUpdateProfile(body, headers, supabase) {
     // Get user token from custom header
     const userToken = extractUserToken(headers);
     if (!userToken) {
-      return new Response(
+  return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1304,10 +1304,10 @@ async function handleUpdateProfile(body, headers, supabase) {
         message: 'Profile updated successfully',
         user
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200 
+    }
     );
 
   } catch (error) {
