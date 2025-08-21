@@ -1730,25 +1730,30 @@ async function handleGetUserDashboard(headers, supabase) {
     const totalInterviews = interviews?.length || 0;
     const completedInterviews = interviews?.filter(i => i.status === 'completed').length || 0;
     
-    // Calculate today's interviews
+    // Calculate today's interviews with better timezone handling
     const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
     
     const todaysInterviews = interviews?.filter(i => {
       if (!i.scheduled_date) return false;
       const interviewDate = new Date(i.scheduled_date);
-      return interviewDate >= todayStart && interviewDate < todayEnd;
+      const interviewDateString = interviewDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      return interviewDateString === todayString;
     }).length || 0;
 
     // Calculate upcoming interviews (next 7 days, excluding today)
-    const nextWeekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-    const nextWeekEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 8);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
     
     const upcomingInterviews = interviews?.filter(i => {
       if (!i.scheduled_date) return false;
       const interviewDate = new Date(i.scheduled_date);
-      return interviewDate >= nextWeekStart && interviewDate < nextWeekEnd;
+      const interviewDateString = interviewDate.toISOString().split('T')[0];
+      const tomorrowString = tomorrow.toISOString().split('T')[0];
+      const nextWeekString = nextWeek.toISOString().split('T')[0];
+      return interviewDateString >= tomorrowString && interviewDateString <= nextWeekString;
     }).length || 0;
 
     const stats = {
