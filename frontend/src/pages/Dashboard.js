@@ -493,9 +493,10 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-4">
               {recentInterviews.map((interview) => (
-                <div
+                <Link
                   key={interview.id}
-                  className="group flex flex-col sm:flex-row sm:items-center sm:justify-between p-6 border border-gray-100 rounded-xl hover:border-primary-200 hover:bg-primary-25 transition-all duration-300 space-y-4 sm:space-y-0"
+                  to={`/interviews/${interview.id}`}
+                  className="group flex flex-col sm:flex-row sm:items-center sm:justify-between p-6 border border-gray-100 rounded-xl hover:border-primary-200 hover:bg-primary-25 transition-all duration-300 space-y-4 sm:space-y-0 cursor-pointer"
                 >
                   <div className="flex items-center space-x-4 flex-1 min-w-0">
                     <div className="flex-shrink-0">
@@ -526,15 +527,9 @@ const Dashboard = () => {
                     <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(interview.status)}`}>
                       {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                     </span>
-                    <Link
-                      to={`/interviews/${interview.id}`}
-                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors btn-responsive"
-                    >
-                      View Details
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
+                    <ArrowRight className="w-4 h-4 text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
