@@ -36,10 +36,12 @@ async function debugUpcoming() {
     console.log(`\n📊 Found ${interviews.length} interviews:`);
 
     const now = new Date();
+    const todayString = now.toISOString().split('T')[0]; // YYYY-MM-DD format
     const nextWeek = new Date(now);
     nextWeek.setDate(nextWeek.getDate() + 7);
 
     console.log(`\n⏰ Current time: ${now.toISOString()}`);
+    console.log(`📅 Today: ${todayString}`);
     console.log(`📅 Next week: ${nextWeek.toISOString()}`);
 
     let upcomingCount = 0;
@@ -49,8 +51,9 @@ async function debugUpcoming() {
     interviews.forEach((interview, index) => {
       const interviewDate = new Date(interview.scheduled_date);
       const isCompleted = interview.status === 'completed';
-      const isUpcoming = !isCompleted && interviewDate >= now && interviewDate <= nextWeek;
-      const isToday = interviewDate.toISOString().split('T')[0] === now.toISOString().split('T')[0];
+      const interviewDateString = interviewDate.toISOString().split('T')[0];
+      const isUpcoming = !isCompleted && interviewDateString >= todayString && interviewDate <= nextWeek;
+      const isToday = interviewDateString === todayString;
 
       console.log(`\n${index + 1}. ${interview.company_name} - ${interview.job_title}`);
       console.log(`   Date: ${interview.scheduled_date}`);
