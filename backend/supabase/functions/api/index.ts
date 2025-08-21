@@ -31,7 +31,7 @@ serve(async (req) => {
       } catch (error) {
         console.error('Error parsing request body:', error);
         body = null;
-      }
+    }
     }
     const headers = Object.fromEntries(req.headers.entries())
     
@@ -758,8 +758,8 @@ async function handleCreateInterview(body, headers, supabase) {
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400 
-          }
-        );
+      }
+    );
       }
     }
 
@@ -775,9 +775,9 @@ async function handleCreateInterview(body, headers, supabase) {
       } else {
         // If scheduled_date is already a timestamp, use it as is
         scheduledDateTime = body.scheduled_date;
-      }
-    }
-    
+  }
+}
+
     const interviewData = {
       ...bodyWithoutTime,
       scheduled_date: scheduledDateTime,
@@ -865,7 +865,7 @@ async function handleGetInterview(id, headers, supabase) {
     }
 
     const userId = decodedToken.userId;
-
+    
     // Get user role to determine access
     const { data: currentUser, error: userError } = await supabase
       .from('users')
@@ -879,9 +879,9 @@ async function handleGetInterview(id, headers, supabase) {
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 404 
-        }
-      );
-    }
+          }
+        );
+      }
 
     // Get interview by ID with candidate details
     let query = supabase
@@ -923,8 +923,8 @@ async function handleGetInterview(id, headers, supabase) {
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
-      }
-    );
+        }
+      );
 
   } catch (error) {
     console.error('Get interview error:', error);
@@ -948,8 +948,8 @@ async function handleUpdateInterview(id, body, headers, supabase) {
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
-        }
-      );
+          }
+        );
     }
 
     // Extract user ID from JWT token
@@ -960,9 +960,9 @@ async function handleUpdateInterview(id, body, headers, supabase) {
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 401 
-        }
-      );
-    }
+          }
+        );
+      }
 
     const userId = decodedToken.userId;
 
@@ -992,7 +992,7 @@ async function handleUpdateInterview(id, body, headers, supabase) {
     // If not admin, only allow access to user's own interviews
     if (currentUser.role !== 'admin') {
       query = query.eq('candidate_id', userId);
-    }
+        }
 
     const { data: existingInterview, error: checkError } = await query.single();
 
@@ -1002,9 +1002,9 @@ async function handleUpdateInterview(id, body, headers, supabase) {
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 404 
-        }
-      );
-    }
+          }
+        );
+      }
 
     // Process update data
     const { scheduled_time, ...bodyWithoutTime } = body;
