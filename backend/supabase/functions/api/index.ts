@@ -935,14 +935,147 @@ async function handleGetInterview(id, headers, supabase) {
 }
 
 async function handleUpdateInterview(id, body, headers, supabase) {
-  // Implement update interview logic
-  return new Response(
-    JSON.stringify({ message: `Update interview ${id} endpoint - implement your logic here` }),
-    { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200 
+  try {
+    // Get user token from custom header
+    const userToken = extractUserToken(headers);
+    if (!userToken) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
-  )
+
+    // Extract user ID from JWT token
+    const decodedToken = decodeJWT(userToken);
+    if (!decodedToken || !decodedToken.userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
+    }
+
+    const userId = decodedToken.userId;
+
+    // Get user role to determine access
+    const { data: currentUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !currentUser) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    // Check if interview exists and user has access
+    let query = supabase
+      .from('interviews')
+      .select('id, candidate_id')
+      .eq('id', id);
+
+    // If not admin, only allow access to user's own interviews
+    if (currentUser.role !== 'admin') {
+      query = query.eq('candidate_id', userId);
+    }
+
+    const { data: existingInterview, error: checkError } = await query.single();
+
+    if (checkError || !existingInterview) {
+      return new Response(
+        JSON.stringify({ error: 'Interview not found' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    // Process update data
+    const { scheduled_time, ...bodyWithoutTime } = body;
+    
+    // Handle scheduled_date - it might already be a timestamp or need to be combined
+    let scheduledDateTime = null;
+    if (body.scheduled_date) {
+      if (body.scheduled_time) {
+        // If both date and time are provided separately, combine them
+        scheduledDateTime = new Date(`${body.scheduled_date}T${body.scheduled_time}`).toISOString();
+      } else {
+        // If scheduled_date is already a timestamp, use it as is
+        scheduledDateTime = body.scheduled_date;
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      ...bodyWithoutTime,
+      scheduled_date: scheduledDateTime,
+      updated_at: new Date().toISOString()
+    };
+
+    // Update the interview
+    const { data: updatedInterview, error: updateError } = await supabase
+      .from('interviews')
+      .update(updateData)
+      .eq('id', id)
+      .select(`
+        *,
+        candidate:users!interviews_candidate_id_fkey(
+          id,
+          name,
+          email,
+          role,
+          phone,
+          current_position,
+          experience_years,
+          skills
+        )
+      `)
+      .single();
+
+    if (updateError) {
+      console.error('Update interview error:', updateError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to update interview' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: 'Interview updated successfully',
+        interview: updatedInterview
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    );
+
+  } catch (error) {
+    console.error('Update interview error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal server error' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
+      }
+    );
+  }
 }
 
 async function handleDeleteInterview(id, headers, supabase) {

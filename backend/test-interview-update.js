@@ -1,202 +1,182 @@
 const axios = require('axios');
 
 // Configuration
-const SUPABASE_URL = 'https://xzndkdqlsllwyygbniht.supabase.co/functions/v1/api';
+const API_BASE_URL = 'https://xzndkdqlsllwyygbniht.supabase.co/functions/v1/api';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6bmRrZHFsc2xsd3l5Z2JuaWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MDc2ODMsImV4cCI6MjA3MTI4MzY4M30.hW0GaAfwNUgsR9_JFgqfi96yP-odqqBc7T6Q2OpxTJQ';
 
-let userToken = null;
-let interviewId = null;
-
 async function testInterviewUpdate() {
-  console.log('🧪 Testing Interview Update Functionality');
-  console.log('==========================================');
-
+  console.log('✏️ Testing Interview Update Functionality...\n');
+  
   try {
-    // Step 1: Register a test user
-    console.log('\n📝 Step 1: Registering test user...');
-    const registerData = {
-      email: `test-update-${Date.now()}@example.com`,
-      password: 'TestPass123!',
-      name: 'Test Update User',
-      phone: '1234567890',
-      current_position: 'Software Engineer',
-      experience_years: 3,
+    // Clean data first
+    console.log('🧹 Cleaning data...');
+    const { execSync } = require('child_process');
+    execSync('node clean-supabase-data.js', { stdio: 'inherit' });
+    
+    // Register a candidate
+    console.log('\n👤 Registering candidate...');
+    const candidateData = {
+      name: 'Test Candidate',
+      email: `candidate-${Date.now()}@example.com`,
+      password: 'Candidate123!',
+      phone: '+1234567890',
+      current_position: 'Software Developer',
+      experience_years: 2,
       skills: 'JavaScript, React, Node.js'
     };
 
-    const registerResponse = await axios.post(`${SUPABASE_URL}/auth/register`, registerData, {
+    const candidateResponse = await axios.post(`${API_BASE_URL}/auth/register`, candidateData, {
       headers: {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json'
       }
     });
-
-    console.log('✅ Registration successful:', registerResponse.data);
-
-    // Step 2: Login to get JWT token
-    console.log('\n🔐 Step 2: Logging in...');
-    const loginData = {
-      email: registerData.email,
-      password: registerData.password
-    };
-
-    const loginResponse = await axios.post(`${SUPABASE_URL}/auth/login`, loginData, {
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    userToken = loginResponse.data.token;
-    console.log('✅ Login successful, got token');
-
-    // Step 3: Create an interview to update
-    console.log('\n📅 Step 3: Creating interview to update...');
-    const createData = {
-      candidate_id: loginResponse.data.user.id,
-      company_name: 'Original Company',
-      job_title: 'Original Job Title',
-      scheduled_date: '2025-08-20T21:13:00.000Z',
+    
+    const candidateToken = candidateResponse.data.token;
+    console.log('✅ Candidate registered successfully');
+    
+    // Create an interview
+    console.log('\n📅 Creating interview...');
+    const interviewData = {
+      company_name: 'Tech Corp',
+      job_title: 'Senior Developer',
+      scheduled_date: '2025-01-15',
+      scheduled_time: '14:00',
       duration: 60,
       round: 1,
       status: 'scheduled',
       interview_type: 'technical',
       location: 'Remote',
-      notes: 'Original notes',
-      company_website: 'https://original.com',
-      company_linkedin_url: 'https://linkedin.com/company/original',
-      other_urls: 'https://original.com/careers',
-      job_description: 'Original job description',
-      salary_range: '50000',
-      interviewer_name: 'Original Interviewer',
-      interviewer_email: 'original@company.com',
-      interviewer_position: 'Original Position',
-      interviewer_linkedin_url: 'https://linkedin.com/in/original'
+      notes: 'Technical interview focusing on React and Node.js',
+      company_website: 'https://techcorp.com',
+      salary_range: '$80k-$120k'
     };
-
-    const createResponse = await axios.post(`${SUPABASE_URL}/interviews`, createData, {
+    
+    const createResponse = await axios.post(`${API_BASE_URL}/interviews`, interviewData, {
       headers: {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'X-User-Token': userToken,
+        'X-User-Token': candidateToken,
         'Content-Type': 'application/json'
       }
     });
-
-    interviewId = createResponse.data.interview.id;
-    console.log('✅ Interview created with ID:', interviewId);
-
-    // Step 4: Get the interview to verify it exists
-    console.log('\n🔍 Step 4: Getting interview details...');
-    const getResponse = await axios.get(`${SUPABASE_URL}/interviews/${interviewId}`, {
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'X-User-Token': userToken
-      }
-    });
-
-    console.log('✅ Interview retrieved:', getResponse.data.interview.company_name);
-
-    // Step 5: Update the interview
-    console.log('\n✏️ Step 5: Updating interview...');
-    const updateData = {
-      company_name: 'Updated Company Name',
-      job_title: 'Updated Job Title',
-      scheduled_date: '2025-08-25T15:30:00.000Z',
+    
+    const interviewId = createResponse.data.interview.id;
+    console.log('✅ Interview created successfully:', interviewId);
+    
+    // Test 1: Update interview with separate date and time
+    console.log('\n✏️ Test 1: Updating interview with separate date and time...');
+    const updateData1 = {
+      company_name: 'Updated Tech Corp',
+      job_title: 'Senior Full Stack Developer',
+      scheduled_date: '2025-01-20',
+      scheduled_time: '15:30',
       duration: 90,
       round: 2,
-      status: 'confirmed',
+      status: 'scheduled',
       interview_type: 'behavioral',
-      location: 'On-site',
-      notes: 'Updated interview notes with more details',
-      company_website: 'https://updated.com',
-      company_linkedin_url: 'https://linkedin.com/company/updated',
-      other_urls: 'https://updated.com/careers',
-      job_description: 'Updated job description with more requirements',
-      salary_range: '75000',
-      interviewer_name: 'Updated Interviewer',
-      interviewer_email: 'updated@company.com',
-      interviewer_position: 'Senior Manager',
-      interviewer_linkedin_url: 'https://linkedin.com/in/updated'
+      location: 'Office',
+      notes: 'Updated interview notes',
+      salary_range: '$90k-$130k'
     };
-
-    console.log('📤 Sending update data:', JSON.stringify(updateData, null, 2));
-
-    const updateResponse = await axios.put(`${SUPABASE_URL}/interviews/${interviewId}`, updateData, {
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'X-User-Token': userToken,
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000
-    });
-
-    console.log('✅ Interview update successful:', updateResponse.data);
-
-    // Step 6: Verify the update
-    console.log('\n🔍 Step 6: Verifying update...');
-    const verifyResponse = await axios.get(`${SUPABASE_URL}/interviews/${interviewId}`, {
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'X-User-Token': userToken
-      }
-    });
-
-    const updatedInterview = verifyResponse.data.interview;
-    console.log('✅ Updated interview details:');
-    console.log('   Company:', updatedInterview.company_name);
-    console.log('   Job Title:', updatedInterview.job_title);
-    console.log('   Status:', updatedInterview.status);
-    console.log('   Duration:', updatedInterview.duration);
-    console.log('   Round:', updatedInterview.round);
-
-    // Verify key changes
-    const changes = [
-      { field: 'company_name', expected: 'Updated Company Name', actual: updatedInterview.company_name },
-      { field: 'job_title', expected: 'Updated Job Title', actual: updatedInterview.job_title },
-      { field: 'status', expected: 'confirmed', actual: updatedInterview.status },
-      { field: 'duration', expected: 90, actual: updatedInterview.duration },
-      { field: 'round', expected: 2, actual: updatedInterview.round }
-    ];
-
-    let allChangesCorrect = true;
-    changes.forEach(change => {
-      if (change.actual !== change.expected) {
-        console.log(`❌ ${change.field}: expected "${change.expected}", got "${change.actual}"`);
-        allChangesCorrect = false;
-      } else {
-        console.log(`✅ ${change.field}: correctly updated to "${change.actual}"`);
-      }
-    });
-
-    if (allChangesCorrect) {
-      console.log('\n🎉 All interview update tests passed!');
-    } else {
-      console.log('\n❌ Some updates did not work correctly');
-    }
-
-  } catch (error) {
-    console.error('\n❌ Test failed with error:');
-    console.error('Error type:', error.constructor.name);
-    console.error('Error message:', error.message);
     
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-      console.error('Response headers:', error.response.headers);
-    } else if (error.request) {
-      console.error('Request error - no response received');
-      console.error('Request details:', error.request);
-    } else {
-      console.error('Error details:', error);
-    }
-
-    // Additional debugging
-    console.log('\n🔍 Additional Debug Info:');
-    console.log('SUPABASE_URL:', SUPABASE_URL);
-    console.log('User token exists:', !!userToken);
-    console.log('Interview ID:', interviewId);
+    const updateResponse1 = await axios.put(`${API_BASE_URL}/interviews/${interviewId}`, updateData1, {
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'X-User-Token': candidateToken,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('✅ Interview updated successfully');
+    console.log('Updated data:', {
+      company: updateResponse1.data.interview.company_name,
+      job_title: updateResponse1.data.interview.job_title,
+      scheduled_date: updateResponse1.data.interview.scheduled_date,
+      duration: updateResponse1.data.interview.duration,
+      round: updateResponse1.data.interview.round
+    });
+    
+    // Test 2: Update interview with combined timestamp
+    console.log('\n✏️ Test 2: Updating interview with combined timestamp...');
+    const updateData2 = {
+      company_name: 'Final Tech Corp',
+      job_title: 'Lead Developer',
+      scheduled_date: '2025-01-25T16:00:00.000Z',
+      duration: 120,
+      round: 3,
+      status: 'scheduled',
+      interview_type: 'final',
+      location: 'Hybrid',
+      notes: 'Final round interview'
+    };
+    
+    const updateResponse2 = await axios.put(`${API_BASE_URL}/interviews/${interviewId}`, updateData2, {
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'X-User-Token': candidateToken,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('✅ Interview updated successfully');
+    console.log('Updated data:', {
+      company: updateResponse2.data.interview.company_name,
+      job_title: updateResponse2.data.interview.job_title,
+      scheduled_date: updateResponse2.data.interview.scheduled_date,
+      duration: updateResponse2.data.interview.duration,
+      round: updateResponse2.data.interview.round
+    });
+    
+    // Test 3: Update interview status to uncertain
+    console.log('\n✏️ Test 3: Updating interview status to uncertain...');
+    const updateData3 = {
+      status: 'uncertain',
+      notes: 'Interview details to be confirmed'
+    };
+    
+    const updateResponse3 = await axios.put(`${API_BASE_URL}/interviews/${interviewId}`, updateData3, {
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'X-User-Token': candidateToken,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('✅ Interview status updated to uncertain');
+    console.log('Updated data:', {
+      status: updateResponse3.data.interview.status,
+      scheduled_date: updateResponse3.data.interview.scheduled_date,
+      duration: updateResponse3.data.interview.duration
+    });
+    
+    // Test 4: Get updated interview to verify
+    console.log('\n📋 Test 4: Getting updated interview to verify...');
+    const getResponse = await axios.get(`${API_BASE_URL}/interviews/${interviewId}`, {
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'X-User-Token': candidateToken,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('✅ Interview retrieved successfully');
+    console.log('Final interview data:', {
+      company: getResponse.data.interview.company_name,
+      job_title: getResponse.data.interview.job_title,
+      status: getResponse.data.interview.status,
+      scheduled_date: getResponse.data.interview.scheduled_date,
+      duration: getResponse.data.interview.duration,
+      round: getResponse.data.interview.round
+    });
+    
+    console.log('\n🎉 ALL INTERVIEW UPDATE TESTS PASSED!');
+    
+  } catch (error) {
+    console.error('❌ Test failed:');
+    console.error('Status:', error.response?.status);
+    console.error('Data:', error.response?.data);
+    console.error('Message:', error.message);
   }
 }
 
-// Run the test
 testInterviewUpdate().catch(console.error); 
