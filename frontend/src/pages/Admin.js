@@ -330,8 +330,10 @@ const Admin = () => {
                       <div>
                         <p className="font-medium text-gray-900">{interview.candidate_name}</p>
                         <p className="text-sm text-gray-600">
-                          {new Date(interview.scheduled_date).toLocaleDateString()} at{' '}
-                          {new Date(interview.scheduled_date).toLocaleTimeString()}
+                          {interview.status === 'uncertain' 
+                            ? 'Date and time to be determined'
+                            : `${new Date(interview.scheduled_date).toLocaleDateString()} at ${new Date(interview.scheduled_date).toLocaleTimeString()}`
+                          }
                         </p>
                       </div>
                     </div>

@@ -503,17 +503,23 @@ const Dashboard = () => {
                         {interview.company_name} - {interview.job_title}
                       </p>
                       <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 mt-2">
-                        <p className="text-sm text-gray-600 overflow-safe">
-                          {new Date(interview.scheduled_date).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric'
-                          })} at{' '}
-                          {new Date(interview.scheduled_date).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
+                        {interview.status === 'uncertain' ? (
+                          <p className="text-sm text-gray-600 overflow-safe">
+                            Date and time to be determined
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-600 overflow-safe">
+                            {new Date(interview.scheduled_date).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric'
+                            })} at{' '}
+                            {new Date(interview.scheduled_date).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        )}
                         <span className="hidden sm:inline text-gray-300">•</span>
                         <p className="text-sm text-gray-600 overflow-safe">{interview.interviewer_name}</p>
                       </div>
